@@ -13,6 +13,38 @@ export const routes: Routes = [
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
+    children: [
+      {
+        path: 'planning',
+        loadComponent: () =>
+          import('./features/planning/planning.component').then((m) => m.PlanningComponent),
+      },
+      {
+        path: 'employees',
+        loadComponent: () =>
+          import('./features/employees/employees.component').then((m) => m.EmployeesComponent),
+      },
+      {
+        path: 'settings/positions',
+        loadComponent: () =>
+          import('./features/positions/positions.component').then((m) => m.PositionsComponent),
+      },
+      {
+        path: 'settings/zones',
+        loadComponent: () =>
+          import('./features/zones/zones.component').then((m) => m.ZonesComponent),
+      },
+      {
+        path: 'settings/shifts',
+        loadComponent: () =>
+          import('./features/shifts/shifts.component').then((m) => m.ShiftsComponent),
+      },
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'planning',
+      },
+    ],
   },
   {
     path: '**',
