@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { email, form, FormField, FormRoot, minLength, required } from '@angular/forms/signals';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -17,6 +17,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 })
 export class LoginForm {
 	private readonly authService = inject(AuthService);
+	private readonly router = inject(Router);
 
 	protected readonly _model = signal({
 		email: '',
@@ -51,6 +52,7 @@ export class LoginForm {
 
 						await firstValueFrom(this.authService.loadCurrentUser());
 						this.loginSucceeded.set(true);
+						await this.router.navigate(['/']);
 					} catch {
 						this.loginError.set('Invalid credentials. Please verify your email and password.');
 					}
