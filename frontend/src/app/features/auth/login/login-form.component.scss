@@ -1,0 +1,31 @@
+:host {
+	display: block;
+}
+
+form {
+	display: block;
+}
+
+hlm-field-group {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+hlm-field:last-child {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+button[hlmBtn] {
+	width: 100%;
+}
+
+a[routerLink] {
+	transition: color 160ms ease;
+}
+
+a[routerLink]:hover {
+	color: var(--foreground);
+}

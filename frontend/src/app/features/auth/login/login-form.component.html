@@ -1,0 +1,49 @@
+<hlm-card>
+  <hlm-card-header>
+    <h3 hlmCardTitle>Login to your account</h3>
+    <p hlmCardDescription>Enter your email below to login to your account</p>
+  </hlm-card-header>
+  <div hlmCardContent>
+    <form [formRoot]="form">
+      <hlm-field-group>
+        <hlm-field>
+          <label hlmFieldLabel for="email">Email</label>
+          <input
+            hlmInput
+            type="email"
+            id="email"
+            placeholder="m@example.com"
+            [formField]="form.email"
+          />
+          @for (error of form.email().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+        <hlm-field>
+          <div class="flex items-center">
+            <label hlmFieldLabel for="password">Password</label>
+            <a
+              hlmFieldDescription
+              class="ml-auto text-sm underline-offset-4 hover:underline"
+              routerLink="."
+            >
+              Forgot password?
+            </a>
+          </div>
+          <input hlmInput type="password" id="password" [formField]="form.password" />
+          @for (error of form.password().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+        <hlm-field>
+          <button hlmBtn type="submit" [disabled]="form().submitting()">Login</button>
+          <button hlmBtn variant="outline" type="button">Login with Google</button>
+          <p hlmFieldDescription class="text-center">
+            Don't have an account?
+            <a routerLink=".">Sign up</a>
+          </p>
+        </hlm-field>
+      </hlm-field-group>
+    </form>
+  </div>
+</hlm-card>

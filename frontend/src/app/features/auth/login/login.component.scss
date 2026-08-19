@@ -1,0 +1,9 @@
+.login-shell {
+	background:
+		radial-gradient(circle at top, color-mix(in oklab, var(--primary) 14%, transparent) 0, transparent 35%),
+		linear-gradient(180deg, color-mix(in oklab, var(--background) 92%, white 8%) 0%, var(--background) 100%);
+}
+
+.login-panel {
+	width: min(100%, 26rem);
+}
