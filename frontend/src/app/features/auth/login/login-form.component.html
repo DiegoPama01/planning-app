@@ -13,6 +13,7 @@
             type="email"
             id="email"
             placeholder="m@example.com"
+            autocomplete="email"
             [formField]="form.email"
           />
           @for (error of form.email().errors(); track error) {
@@ -30,14 +31,20 @@
               Forgot password?
             </a>
           </div>
-          <input hlmInput type="password" id="password" [formField]="form.password" />
+          <input hlmInput type="password" id="password" autocomplete="current-password" [formField]="form.password" />
           @for (error of form.password().errors(); track error) {
             <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
           }
         </hlm-field>
+        @if (loginError(); as errorMessage) {
+          <p class="text-sm font-medium text-red-600" aria-live="polite">{{ errorMessage }}</p>
+        }
+        @if (loginSucceeded()) {
+          <p class="text-sm font-medium text-green-700" aria-live="polite">Login successful.</p>
+        }
         <hlm-field>
-          <button hlmBtn type="submit" [disabled]="form().submitting()">Login</button>
-          <button hlmBtn variant="outline" type="button">Login with Google</button>
+          <button hlmBtn type="submit" [disabled]="isBusy()">Login</button>
+          <button hlmBtn variant="outline" type="button" [disabled]="isBusy()">Login with Google</button>
           <p hlmFieldDescription class="text-center">
             Don't have an account?
             <a routerLink=".">Sign up</a>
