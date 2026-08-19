@@ -92,32 +92,7 @@ export const data = {
 		},
 	],
 	navSecondary: [
-		{
-			title: 'Support',
-			url: '.',
-			icon: 'lucideLifeBuoy',
-		},
-		{
-			title: 'Feedback',
-			url: '.',
-			icon: 'lucideSend',
-		},
 	],
 	projects: [
-		{
-			name: 'Design Engineering',
-			url: '.',
-			icon: 'lucideFrame',
-		},
-		{
-			name: 'Sales & Marketing',
-			url: '.',
-			icon: 'lucideChartPie',
-		},
-		{
-			name: 'Travel',
-			url: '.',
-			icon: 'lucideMap',
-		},
 	],
 };

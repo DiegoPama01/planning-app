@@ -4,8 +4,6 @@ import { lucideCommand } from '@ng-icons/lucide';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
 import { data } from '../../shared/sidebar/data';
 import { NavMain } from '../../shared/sidebar/nav-main';
-import { NavProjects } from '../../shared/sidebar/nav-projects';
-import { NavSecondary } from '../../shared/sidebar/nav-secondary';
 import { NavUser } from '../../shared/sidebar/nav-user';
 
 export interface SidebarUser {
@@ -16,7 +14,7 @@ export interface SidebarUser {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [HlmSidebarImports, NgIcon, NavMain, NavProjects, NavUser, NavSecondary],
+  imports: [HlmSidebarImports, NgIcon, NavMain, NavUser],
   providers: [provideIcons({ lucideCommand })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sidebar.component.html',
@@ -31,8 +29,4 @@ export class SidebarComponent {
   protected requestLogout(): void {
     this.logoutRequested.emit();
   }
-}
-
-export class AppSidebar {
-	public readonly data = data;
 }

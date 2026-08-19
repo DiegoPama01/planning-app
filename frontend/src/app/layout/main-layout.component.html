@@ -1,4 +1,9 @@
-<app-sidebar>
+<app-sidebar
+  [companyName]="companyName()"
+  [companyPlan]="companyPlan()"
+  [user]="sidebarUser()"
+  (logoutRequested)="logout()"
+>
   <app-header header />
   <main hlmSidebarInset>
     <div class="flex flex-1 flex-col gap-4 p-4">

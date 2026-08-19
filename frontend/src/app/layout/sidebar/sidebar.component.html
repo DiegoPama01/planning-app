@@ -14,8 +14,8 @@
                 <ng-icon name="lucideCommand" class="text-base" />
               </div>
               <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-medium">Acme Inc</span>
-                <span class="truncate text-xs">Enterprise</span>
+                <span class="truncate font-medium">{{ companyName() }}</span>
+                <span class="truncate text-xs">{{ companyPlan() }}</span>
               </div>
             </a>
           </li>
@@ -24,11 +24,9 @@
 
       <hlm-sidebar-content>
         <spartan-nav-main [items]="data.navMain" />
-        <spartan-nav-projects [projects]="data.projects" />
-        <spartan-nav-secondary class="mt-auto" [items]="data.navSecondary" />
       </hlm-sidebar-content>
       <hlm-sidebar-footer>
-        <spartan-nav-user [user]="data.user" />
+        <spartan-nav-user [user]="user()" (logoutRequested)="requestLogout()" />
       </hlm-sidebar-footer>
     </hlm-sidebar>
     <ng-content />
