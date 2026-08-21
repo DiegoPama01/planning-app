@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AuthService } from '../core/auth/auth.service';
@@ -7,7 +7,7 @@ import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
 
 @Component({
   selector: 'app-main-layout',
-  imports: [HlmSidebarImports, HeaderComponent, SidebarComponent],
+  imports: [RouterOutlet, HlmSidebarImports, HeaderComponent, SidebarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './main-layout.component.html',
   host: {

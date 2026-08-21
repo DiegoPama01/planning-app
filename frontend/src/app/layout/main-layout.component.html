@@ -5,14 +5,9 @@
   (logoutRequested)="logout()"
 >
   <app-header header />
-  <main hlmSidebarInset>
-    <div class="flex flex-1 flex-col gap-4 p-4">
-      <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-        <div class="bg-muted/50 aspect-video rounded-xl"></div>
-        <div class="bg-muted/50 aspect-video rounded-xl"></div>
-        <div class="bg-muted/50 aspect-video rounded-xl"></div>
-      </div>
-      <div class="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min"></div>
+  <main hlmSidebarInset class="min-h-[calc(100svh-var(--header-height))]">
+    <div class="flex min-h-full min-w-0 flex-1 flex-col p-4 md:p-6">
+      <router-outlet />
     </div>
   </main>
 </app-sidebar>

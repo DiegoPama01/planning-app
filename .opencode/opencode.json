@@ -1,0 +1,38 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    },
+
+    "angular": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@angular/cli",
+        "mcp"
+      ]
+    },
+
+    "spartan-ui": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@spartan-ng/mcp"
+      ]
+    }
+  },
+
+  "watcher": {
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      ".angular/**",
+      ".git/**"
+    ]
+  }
+}

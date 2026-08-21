@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
+import { API_BASE_URL } from '../api/api.config';
 import { CompanyMembership, LoginRequest, TokenResponse, User } from './auth.model';
 
 @Injectable({
@@ -8,8 +9,7 @@ import { CompanyMembership, LoginRequest, TokenResponse, User } from './auth.mod
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
-
-  private readonly apiUrl = 'http://127.0.0.1:8000/api';
+  private readonly apiUrl = inject(API_BASE_URL);
 
   currentUser = signal<User | null>(null);
   activeCompany = signal<CompanyMembership | null>(null);

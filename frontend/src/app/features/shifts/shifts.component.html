@@ -1,0 +1,97 @@
+<section class="flex min-w-0 flex-1 flex-col gap-6">
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div class="space-y-1">
+      <p class="text-muted-foreground text-sm font-medium uppercase tracking-[0.2em]">Settings</p>
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight">Shifts</h1>
+        <p class="text-muted-foreground text-sm">
+          Manage the time windows employees can be assigned to across the schedule.
+        </p>
+      </div>
+    </div>
+
+    <button hlmBtn type="button" disabled>
+      New shift
+    </button>
+  </div>
+
+  @if (shiftsResource.isLoading()) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-64 flex-col items-center justify-center gap-3 py-10 text-center">
+        <div class="bg-muted h-10 w-10 animate-pulse rounded-full"></div>
+        <div class="space-y-1">
+          <p class="font-medium">Loading shifts</p>
+          <p class="text-muted-foreground text-sm">Fetching company shift definitions from the backend.</p>
+        </div>
+      </div>
+    </hlm-card>
+  } @else if (shiftsError(); as errorMessage) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-64 flex-col items-center justify-center gap-4 py-10 text-center">
+        <div class="space-y-1">
+          <p class="font-medium">Shifts are unavailable</p>
+          <p class="text-muted-foreground text-sm" aria-live="polite">{{ errorMessage }}</p>
+        </div>
+
+        <button hlmBtn type="button" variant="outline" (click)="reload()">
+          Retry
+        </button>
+      </div>
+    </hlm-card>
+  } @else if (shifts().length === 0) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-64 flex-col items-center justify-center gap-3 py-10 text-center">
+        <div class="space-y-1">
+          <p class="font-medium">No shifts yet</p>
+          <p class="text-muted-foreground text-sm">
+            Create your first shift to define available working hours.
+          </p>
+        </div>
+
+        <button hlmBtn type="button" disabled>
+          Create first shift
+        </button>
+      </div>
+    </hlm-card>
+  } @else {
+    <div hlmTableContainer class="rounded-lg border bg-card">
+      <table hlmTable class="min-w-[760px]">
+        <thead hlmTableHeader>
+          <tr hlmTableRow>
+            <th hlmTableHead>Name</th>
+            <th hlmTableHead>Hours</th>
+            <th hlmTableHead>Color</th>
+            <th hlmTableHead>ID</th>
+            <th hlmTableHead class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody hlmTableBody>
+          @for (shift of shifts(); track shift.id) {
+            <tr hlmTableRow>
+              <td hlmTableCell class="font-medium">{{ shift.name }}</td>
+              <td hlmTableCell class="text-muted-foreground">{{ shift.start_time }} - {{ shift.end_time }}</td>
+              <td hlmTableCell>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="h-3 w-3 rounded-full border border-black/10"
+                    [style.background-color]="shift.color"
+                  ></span>
+                  <span>{{ shift.color }}</span>
+                </div>
+              </td>
+              <td hlmTableCell class="text-muted-foreground">
+                <span class="block max-w-44 truncate">{{ shift.id }}</span>
+              </td>
+              <td hlmTableCell class="text-right">
+                <div class="flex justify-end gap-2">
+                  <button hlmBtn type="button" variant="outline" size="sm" disabled>Edit</button>
+                  <button hlmBtn type="button" variant="ghost" size="sm" disabled>Delete</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
