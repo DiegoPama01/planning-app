@@ -1,0 +1,35 @@
+<hlm-card>
+  <div hlmCardContent class="pt-6">
+    <form [formRoot]="zoneForm">
+      <hlm-field-group class="space-y-6">
+        <hlm-field>
+          <label hlmFieldLabel for="zone-name">Name</label>
+          <input hlmInput id="zone-name" type="text" placeholder="Front desk" [formField]="zoneForm.name" />
+          @for (error of zoneForm.name().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+
+        <hlm-field>
+          <label hlmFieldLabel for="zone-color">Color</label>
+          <div class="flex items-center gap-3">
+            <input hlmInput id="zone-color" type="color" class="h-11 w-16 shrink-0 p-1" [formField]="zoneForm.color" />
+            <code class="text-muted-foreground text-sm">{{ zoneForm.color().value() }}</code>
+          </div>
+          @for (error of zoneForm.color().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+
+        @if (formError(); as errorMessage) {
+          <p class="text-sm font-medium text-red-600" aria-live="polite">{{ errorMessage }}</p>
+        }
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button hlmBtn type="button" variant="outline" (click)="cancel()" [disabled]="zoneForm().submitting()">Cancel</button>
+          <button hlmBtn type="submit" [disabled]="zoneForm().submitting()">{{ submitLabel() }}</button>
+        </div>
+      </hlm-field-group>
+    </form>
+  </div>
+</hlm-card>

@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <button hlmBtn type="button" disabled>
+    <button hlmBtn type="button" routerLink="new">
       New position
     </button>
   </div>
@@ -48,7 +48,7 @@
           </p>
         </div>
 
-        <button hlmBtn type="button" disabled>
+        <button hlmBtn type="button" routerLink="new">
           Create first position
         </button>
       </div>
@@ -84,7 +84,7 @@
               </td>
               <td hlmTableCell class="text-right">
                 <div class="flex justify-end gap-2">
-                  <button hlmBtn type="button" variant="outline" size="sm" disabled>Edit</button>
+                  <button hlmBtn type="button" variant="outline" size="sm" [routerLink]="[position.id, 'edit']">Edit</button>
                   <button hlmBtn type="button" variant="ghost" size="sm" disabled>Delete</button>
                 </div>
               </td>

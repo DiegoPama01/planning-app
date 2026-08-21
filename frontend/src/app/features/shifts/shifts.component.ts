@@ -5,6 +5,7 @@ import {
   inject,
   resource,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -13,7 +14,7 @@ import { ShiftsService } from './shifts.service';
 
 @Component({
   selector: 'app-shifts',
-  imports: [HlmButtonImports, HlmCardImports, HlmTableImports],
+  imports: [RouterLink, HlmButtonImports, HlmCardImports, HlmTableImports],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shifts.component.html',
 })

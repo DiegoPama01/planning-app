@@ -27,8 +27,34 @@ export const routes: Routes = [
         data: {
           breadcrumb: 'Employees',
         },
-        loadComponent: () =>
-          import('./features/employees/employees.component').then((m) => m.EmployeesComponent),
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./features/employees/employees.component').then((m) => m.EmployeesComponent),
+          },
+          {
+            path: 'new',
+            data: {
+              breadcrumb: 'New',
+            },
+            loadComponent: () =>
+              import('./features/employees/employees-form-page.component').then(
+                (m) => m.EmployeesFormPageComponent,
+              ),
+          },
+          {
+            path: ':id/edit',
+            data: {
+              breadcrumb: 'Edit',
+            },
+            loadComponent: () =>
+              import('./features/employees/employees-form-page.component').then(
+                (m) => m.EmployeesFormPageComponent,
+              ),
+          },
+        ],
       },
       {
         path: 'settings',
@@ -41,24 +67,102 @@ export const routes: Routes = [
             data: {
               breadcrumb: 'Positions',
             },
-            loadComponent: () =>
-              import('./features/positions/positions.component').then((m) => m.PositionsComponent),
+            children: [
+              {
+                path: '',
+                pathMatch: 'full',
+                loadComponent: () =>
+                  import('./features/positions/positions.component').then((m) => m.PositionsComponent),
+              },
+              {
+                path: 'new',
+                data: {
+                  breadcrumb: 'New',
+                },
+                loadComponent: () =>
+                  import('./features/positions/positions-form-page.component').then(
+                    (m) => m.PositionsFormPageComponent,
+                  ),
+              },
+              {
+                path: ':id/edit',
+                data: {
+                  breadcrumb: 'Edit',
+                },
+                loadComponent: () =>
+                  import('./features/positions/positions-form-page.component').then(
+                    (m) => m.PositionsFormPageComponent,
+                  ),
+              },
+            ],
           },
           {
             path: 'zones',
             data: {
               breadcrumb: 'Zones',
             },
-            loadComponent: () =>
-              import('./features/zones/zones.component').then((m) => m.ZonesComponent),
+            children: [
+              {
+                path: '',
+                pathMatch: 'full',
+                loadComponent: () =>
+                  import('./features/zones/zones.component').then((m) => m.ZonesComponent),
+              },
+              {
+                path: 'new',
+                data: {
+                  breadcrumb: 'New',
+                },
+                loadComponent: () =>
+                  import('./features/zones/zones-form-page.component').then(
+                    (m) => m.ZonesFormPageComponent,
+                  ),
+              },
+              {
+                path: ':id/edit',
+                data: {
+                  breadcrumb: 'Edit',
+                },
+                loadComponent: () =>
+                  import('./features/zones/zones-form-page.component').then(
+                    (m) => m.ZonesFormPageComponent,
+                  ),
+              },
+            ],
           },
           {
             path: 'shifts',
             data: {
               breadcrumb: 'Shifts',
             },
-            loadComponent: () =>
-              import('./features/shifts/shifts.component').then((m) => m.ShiftsComponent),
+            children: [
+              {
+                path: '',
+                pathMatch: 'full',
+                loadComponent: () =>
+                  import('./features/shifts/shifts.component').then((m) => m.ShiftsComponent),
+              },
+              {
+                path: 'new',
+                data: {
+                  breadcrumb: 'New',
+                },
+                loadComponent: () =>
+                  import('./features/shifts/shifts-form-page.component').then(
+                    (m) => m.ShiftsFormPageComponent,
+                  ),
+              },
+              {
+                path: ':id/edit',
+                data: {
+                  breadcrumb: 'Edit',
+                },
+                loadComponent: () =>
+                  import('./features/shifts/shifts-form-page.component').then(
+                    (m) => m.ShiftsFormPageComponent,
+                  ),
+              },
+            ],
           },
         ],
       },

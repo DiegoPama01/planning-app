@@ -5,6 +5,7 @@ import {
   inject,
   resource,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -29,7 +30,7 @@ interface EmployeeRow {
 
 @Component({
   selector: 'app-employees',
-  imports: [HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmTableImports],
+  imports: [RouterLink, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmTableImports],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employees.component.html',
 })

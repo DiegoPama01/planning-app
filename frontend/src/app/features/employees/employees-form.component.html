@@ -1,0 +1,156 @@
+<hlm-card>
+  <div hlmCardContent class="pt-6">
+    <form [formRoot]="employeeForm">
+      <hlm-field-group class="space-y-6">
+        <div class="grid gap-6 md:grid-cols-2">
+          <hlm-field>
+            <label hlmFieldLabel for="employee-first-name">First name</label>
+            <input hlmInput id="employee-first-name" type="text" placeholder="Alex" [formField]="employeeForm.first_name" />
+            @for (error of employeeForm.first_name().errors(); track error) {
+              <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+            }
+          </hlm-field>
+
+          <hlm-field>
+            <label hlmFieldLabel for="employee-last-name">Last name</label>
+            <input hlmInput id="employee-last-name" type="text" placeholder="Johnson" [formField]="employeeForm.last_name" />
+            @for (error of employeeForm.last_name().errors(); track error) {
+              <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+            }
+          </hlm-field>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <hlm-field>
+            <label hlmFieldLabel for="employee-position-trigger">Position</label>
+            <hlm-select [value]="model().position || null" [itemToString]="positionToLabel" (valueChange)="updatePosition($event ?? '')">
+              <hlm-select-trigger id="employee-position-trigger" class="w-full">
+                <hlm-select-value placeholder="Select a position" />
+              </hlm-select-trigger>
+              <hlm-select-content *hlmSelectPortal>
+                <hlm-select-group>
+                  @for (position of positions(); track position.id) {
+                    <hlm-select-item [value]="position.id">{{ position.name }}</hlm-select-item>
+                  }
+                </hlm-select-group>
+              </hlm-select-content>
+            </hlm-select>
+            @for (error of employeeForm.position().errors(); track error) {
+              <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+            }
+          </hlm-field>
+
+          <div class="flex items-center gap-3 rounded-lg px-4 py-3">
+            <div>
+              <p class="text-sm font-medium">Active employee</p>
+              <p class="text-muted-foreground text-xs">Included in planning</p>
+            </div>
+            <hlm-switch [checked]="model().active" (checkedChange)="updateActive($event)" />
+          </div>
+        </div>
+
+        <div class="grid gap-6 xl:grid-cols-2">
+          <hlm-field>
+            <div class="space-y-3">
+              <div>
+                <p class="text-sm font-medium">Allowed zones</p>
+                <p class="text-muted-foreground text-sm">Choose where this employee can be assigned.</p>
+              </div>
+              <div hlmTableContainer class="rounded-lg border bg-background">
+                <table hlmTable>
+                  <thead hlmTableHeader>
+                    <tr hlmTableRow>
+                      <th hlmTableHead class="w-16">
+                        <div class="flex justify-center">
+                          <hlm-checkbox
+                            [checked]="areAllZonesSelected()"
+                            (checkedChange)="toggleAllZones($event)"
+                            aria-label="Toggle all zones"
+                          />
+                        </div>
+                      </th>
+                      <th hlmTableHead>Zone</th>
+                    </tr>
+                  </thead>
+                  <tbody hlmTableBody>
+                    @for (zone of zones(); track zone.id) {
+                      <tr hlmTableRow>
+                        <td hlmTableCell>
+                          <div class="flex justify-center">
+                            <hlm-checkbox
+                              [checked]="model().allowed_zones.includes(zone.id)"
+                              (checkedChange)="toggleZone(zone.id, $event)"
+                              aria-label="Toggle {{ zone.name }} zone"
+                            />
+                          </div>
+                        </td>
+                        <td hlmTableCell class="font-medium">{{ zone.name }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </hlm-field>
+
+          <hlm-field>
+            <div class="space-y-3">
+              <div>
+                <p class="text-sm font-medium">Allowed shifts</p>
+                <p class="text-muted-foreground text-sm">Choose which shifts this employee can work.</p>
+              </div>
+              <div hlmTableContainer class="rounded-lg border bg-background">
+                <table hlmTable>
+                  <thead hlmTableHeader>
+                    <tr hlmTableRow>
+                      <th hlmTableHead class="w-16">
+                        <div class="flex justify-center">
+                          <hlm-checkbox
+                            [checked]="areAllShiftsSelected()"
+                            (checkedChange)="toggleAllShifts($event)"
+                            aria-label="Toggle all shifts"
+                          />
+                        </div>
+                      </th>
+                      <th hlmTableHead>Shift</th>
+                    </tr>
+                  </thead>
+                  <tbody hlmTableBody>
+                    @for (shift of shifts(); track shift.id) {
+                      <tr hlmTableRow>
+                        <td hlmTableCell>
+                          <div class="flex justify-center">
+                            <hlm-checkbox
+                              [checked]="model().allowed_shifts.includes(shift.id)"
+                              (checkedChange)="toggleShift(shift.id, $event)"
+                              aria-label="Toggle {{ shift.name }} shift"
+                            />
+                          </div>
+                        </td>
+                        <td hlmTableCell>
+                          <div class="flex flex-col">
+                            <span class="font-medium">{{ shift.name }}</span>
+                            <span class="text-muted-foreground text-xs">{{ shift.start_time }} - {{ shift.end_time }}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </hlm-field>
+        </div>
+
+        @if (formError(); as errorMessage) {
+          <p class="text-sm font-medium text-red-600" aria-live="polite">{{ errorMessage }}</p>
+        }
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button hlmBtn type="button" variant="outline" (click)="cancel()" [disabled]="employeeForm().submitting()">Cancel</button>
+          <button hlmBtn type="submit" [disabled]="employeeForm().submitting()">{{ submitLabel() }}</button>
+        </div>
+      </hlm-field-group>
+    </form>
+  </div>
+</hlm-card>

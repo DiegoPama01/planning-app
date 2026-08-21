@@ -1,0 +1,69 @@
+import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { PositionsFormComponent } from './positions-form.component';
+import { PositionUpsertPayload } from './positions.model';
+import { PositionsService } from './positions.service';
+
+@Component({
+  selector: 'app-positions-form-page',
+  imports: [HlmButtonImports, PositionsFormComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './positions-form-page.component.html',
+})
+export class PositionsFormPageComponent {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly positionsService = inject(PositionsService);
+
+  private readonly positionId = this.route.snapshot.paramMap.get('id');
+  protected readonly isEditMode = this.positionId !== null;
+  protected readonly formError = signal<string | null>(null);
+
+  protected readonly positionResource = resource({
+    loader: async () => {
+      if (!this.positionId) {
+        return null;
+      }
+
+      return firstValueFrom(this.positionsService.get(this.positionId));
+    },
+  });
+
+  protected readonly initialValue = computed<PositionUpsertPayload>(() => {
+    const position = this.positionResource.value();
+
+    if (!position) {
+      return {
+        name: '',
+        color: '#0f172a',
+      };
+    }
+
+    return {
+      name: position.name,
+      color: position.color,
+    };
+  });
+
+  protected async savePosition(payload: PositionUpsertPayload): Promise<void> {
+    this.formError.set(null);
+
+    try {
+      if (this.positionId) {
+        await firstValueFrom(this.positionsService.update(this.positionId, payload));
+      } else {
+        await firstValueFrom(this.positionsService.create(payload));
+      }
+
+      await this.router.navigate(['/settings/positions']);
+    } catch {
+      this.formError.set('We could not save this position. Please review the form and try again.');
+    }
+  }
+
+  protected async goBack(): Promise<void> {
+    await this.router.navigate(['/settings/positions']);
+  }
+}
