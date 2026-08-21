@@ -70,12 +70,7 @@
         <tbody hlmTableBody>
           @for (employee of employees(); track employee.id) {
             <tr hlmTableRow>
-              <td hlmTableCell>
-                <div class="flex flex-col">
-                  <span class="font-medium">{{ employee.fullName }}</span>
-                  <span class="text-muted-foreground text-xs">{{ employee.firstName }} {{ employee.lastName }}</span>
-                </div>
-              </td>
+              <td hlmTableCell class="font-medium">{{ employee.fullName }}</td>
               <td hlmTableCell>
                 <span hlmBadge [variant]="employee.active ? 'default' : 'secondary'">
                   {{ employee.active ? 'Active' : 'Inactive' }}
@@ -90,7 +85,25 @@
               <td hlmTableCell class="text-right">
                 <div class="flex justify-end gap-2">
                   <button hlmBtn type="button" variant="outline" size="sm" [routerLink]="[employee.id, 'edit']">Edit</button>
-                  <button hlmBtn type="button" variant="ghost" size="sm" disabled>Delete</button>
+                  <hlm-alert-dialog>
+                    <button hlmAlertDialogTrigger hlmBtn type="button" variant="destructive" size="sm" [disabled]="isDeleting(employee.id)">
+                      Delete
+                    </button>
+                    <hlm-alert-dialog-content *hlmAlertDialogPortal>
+                      <hlm-alert-dialog-header>
+                        <h2 hlmAlertDialogTitle>Delete employee?</h2>
+                        <p hlmAlertDialogDescription>
+                          This will permanently remove <span class="font-medium">{{ employee.fullName }}</span> from this company.
+                        </p>
+                      </hlm-alert-dialog-header>
+                      <hlm-alert-dialog-footer>
+                        <button hlmAlertDialogCancel type="button">Cancel</button>
+                        <button hlmAlertDialogAction type="button" variant="destructive" [disabled]="isDeleting(employee.id)" (click)="deleteEmployee(employee.id, employee.fullName)">
+                          Delete
+                        </button>
+                      </hlm-alert-dialog-footer>
+                    </hlm-alert-dialog-content>
+                  </hlm-alert-dialog>
                 </div>
               </td>
             </tr>

@@ -85,7 +85,25 @@
               <td hlmTableCell class="text-right">
                 <div class="flex justify-end gap-2">
                   <button hlmBtn type="button" variant="outline" size="sm" [routerLink]="[position.id, 'edit']">Edit</button>
-                  <button hlmBtn type="button" variant="ghost" size="sm" disabled>Delete</button>
+                  <hlm-alert-dialog>
+                    <button hlmAlertDialogTrigger hlmBtn type="button" variant="destructive" size="sm" [disabled]="isDeleting(position.id)">
+                      Delete
+                    </button>
+                    <hlm-alert-dialog-content *hlmAlertDialogPortal>
+                      <hlm-alert-dialog-header>
+                        <h2 hlmAlertDialogTitle>Delete position?</h2>
+                        <p hlmAlertDialogDescription>
+                          This will permanently remove <span class="font-medium">{{ position.name }}</span> from this company.
+                        </p>
+                      </hlm-alert-dialog-header>
+                      <hlm-alert-dialog-footer>
+                        <button hlmAlertDialogCancel type="button">Cancel</button>
+                        <button hlmAlertDialogAction type="button" variant="destructive" [disabled]="isDeleting(position.id)" (click)="deletePosition(position.id, position.name)">
+                          Delete
+                        </button>
+                      </hlm-alert-dialog-footer>
+                    </hlm-alert-dialog-content>
+                  </hlm-alert-dialog>
                 </div>
               </td>
             </tr>

@@ -4,9 +4,11 @@ import {
   computed,
   inject,
   resource,
+  signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
+import { HlmAlertDialogImports } from '@spartan-ng/helm/alert-dialog';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -30,7 +32,7 @@ interface EmployeeRow {
 
 @Component({
   selector: 'app-employees',
-  imports: [RouterLink, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmTableImports],
+  imports: [RouterLink, HlmAlertDialogImports, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmTableImports],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employees.component.html',
 })
@@ -39,6 +41,7 @@ export class EmployeesComponent {
   private readonly positionsService = inject(PositionsService);
   private readonly zonesService = inject(ZonesService);
   private readonly shiftsService = inject(ShiftsService);
+  private readonly deletingIds = signal<Set<string>>(new Set());
 
   protected readonly employeesResource = resource({
     loader: async () =>
@@ -67,6 +70,7 @@ export class EmployeesComponent {
       this.mapEmployeeRow(employee, positionsById, zonesById, shiftsById),
     );
   });
+  protected readonly isDeleting = (employeeId: string) => this.deletingIds().has(employeeId);
 
   protected readonly employeesError = computed(() => {
     const error = this.employeesResource.error();
@@ -82,6 +86,21 @@ export class EmployeesComponent {
 
   protected reload(): void {
     void this.employeesResource.reload();
+  }
+
+  protected async deleteEmployee(employeeId: string, employeeName: string): Promise<void> {
+    this.deletingIds.update((ids) => new Set(ids).add(employeeId));
+
+    try {
+      await firstValueFrom(this.employeesService.delete(employeeId));
+      await this.employeesResource.reload();
+    } finally {
+      this.deletingIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(employeeId);
+        return next;
+      });
+    }
   }
 
   private mapEmployeeRow(
