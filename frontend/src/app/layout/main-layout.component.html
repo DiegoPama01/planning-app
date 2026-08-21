@@ -1,7 +1,10 @@
 <app-sidebar
+  [companies]="companies()"
+  [activeCompanyId]="activeCompanyId()"
   [companyName]="companyName()"
   [companyPlan]="companyPlan()"
   [user]="sidebarUser()"
+  (companySelected)="selectCompany($event)"
   (logoutRequested)="logout()"
 >
   <app-header header />

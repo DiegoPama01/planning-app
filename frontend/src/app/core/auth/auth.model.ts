@@ -19,6 +19,10 @@ export interface TokenResponse {
   refresh: string;
 }
 
+export interface TokenRefreshResponse {
+  access: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

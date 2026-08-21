@@ -4,6 +4,7 @@ import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AuthService } from '../core/auth/auth.service';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
+import { CompanyMembership } from '../core/auth/auth.model';
 
 @Component({
   selector: 'app-main-layout',
@@ -40,6 +41,13 @@ export class MainLayoutComponent {
 
   protected readonly companyName = computed(() => this.authService.activeCompany()?.name ?? 'Workspace');
   protected readonly companyPlan = computed(() => this.authService.activeCompany()?.role ?? 'member');
+  protected readonly companies = computed(() => this.authService.currentUser()?.companies ?? []);
+  protected readonly activeCompanyId = computed(() => this.authService.activeCompany()?.id ?? null);
+
+  protected selectCompany(companyId: string): void {
+    const company = this.companies().find((item) => item.id === companyId) ?? null;
+    this.authService.setActiveCompany(company);
+  }
 
   protected logout(): void {
     this.authService.logout();

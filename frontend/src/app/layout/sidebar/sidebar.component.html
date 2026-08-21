@@ -7,7 +7,12 @@
       <hlm-sidebar-header>
         <ul hlmSidebarMenu>
           <li hlmSidebarMenuItem>
-            <a hlmSidebarMenuButton size="lg" href="#">
+            <button
+              hlmSidebarMenuButton
+              size="lg"
+              type="button"
+              [hlmDropdownMenuTrigger]="companyMenu"
+            >
               <div
                 class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
               >
@@ -17,7 +22,8 @@
                 <span class="truncate font-medium">{{ companyName() }}</span>
                 <span class="truncate text-xs">{{ companyPlan() }}</span>
               </div>
-            </a>
+              <ng-icon name="lucideChevronsUpDown" class="ml-auto text-base" />
+            </button>
           </li>
         </ul>
       </hlm-sidebar-header>
@@ -32,3 +38,21 @@
     <ng-content />
   </div>
 </div>
+
+<ng-template #companyMenu>
+  <hlm-dropdown-menu class="min-w-64 rounded-lg">
+    <hlm-dropdown-menu-label>Switch company</hlm-dropdown-menu-label>
+    <hlm-dropdown-menu-separator />
+    @for (company of companies(); track company.id) {
+      <button hlmDropdownMenuItem type="button" (click)="selectCompany(company.id)">
+        <div class="grid flex-1 text-left text-sm leading-tight">
+          <span class="truncate font-medium">{{ company.name }}</span>
+          <span class="text-muted-foreground truncate text-xs">{{ company.role }}</span>
+        </div>
+        @if (company.id === activeCompanyId()) {
+          <ng-icon name="lucideCheck" class="ml-2 text-base" />
+        }
+      </button>
+    }
+  </hlm-dropdown-menu>
+</ng-template>

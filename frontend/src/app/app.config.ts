@@ -1,4 +1,4 @@
-import { ApplicationConfig } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer } from '@angular/core';
 import {
   provideHttpClient,
   withInterceptors,
@@ -7,6 +7,7 @@ import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api/api.config';
+import { AuthService } from './core/auth/auth.service';
 import { authInterceptor } from './core/auth/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -15,6 +16,9 @@ export const appConfig: ApplicationConfig = {
       provide: API_BASE_URL,
       useValue: 'http://127.0.0.1:8000/api',
     },
+    provideAppInitializer(() => {
+      inject(AuthService).hydrateContext();
+    }),
     provideRouter(routes),
     provideHttpClient(
       withInterceptors([
