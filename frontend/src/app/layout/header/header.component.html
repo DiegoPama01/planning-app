@@ -4,13 +4,19 @@
     <hlm-separator orientation="vertical" class="mr-2" />
     <nav hlmBreadcrumb class="hidden sm:block">
       <ol hlmBreadcrumbList>
-        <li hlmBreadcrumbItem>
-          <a hlmBreadcrumbLink link="/">Building Your Application</a>
-        </li>
-        <li hlmBreadcrumbSeparator></li>
-        <li hlmBreadcrumbItem>
-          <a hlmBreadcrumbPage>Data Fetching</a>
-        </li>
+        @for (breadcrumb of breadcrumbs(); track breadcrumb.url; let last = $last) {
+          <li hlmBreadcrumbItem>
+            @if (last) {
+              <a hlmBreadcrumbPage>{{ breadcrumb.label }}</a>
+            } @else {
+              <a hlmBreadcrumbLink [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
+            }
+          </li>
+
+          @if (!last) {
+            <li hlmBreadcrumbSeparator></li>
+          }
+        }
       </ol>
     </nav>
 

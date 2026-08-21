@@ -16,28 +16,51 @@ export const routes: Routes = [
     children: [
       {
         path: 'planning',
+        data: {
+          breadcrumb: 'Planning',
+        },
         loadComponent: () =>
           import('./features/planning/planning.component').then((m) => m.PlanningComponent),
       },
       {
         path: 'employees',
+        data: {
+          breadcrumb: 'Employees',
+        },
         loadComponent: () =>
           import('./features/employees/employees.component').then((m) => m.EmployeesComponent),
       },
       {
-        path: 'settings/positions',
-        loadComponent: () =>
-          import('./features/positions/positions.component').then((m) => m.PositionsComponent),
-      },
-      {
-        path: 'settings/zones',
-        loadComponent: () =>
-          import('./features/zones/zones.component').then((m) => m.ZonesComponent),
-      },
-      {
-        path: 'settings/shifts',
-        loadComponent: () =>
-          import('./features/shifts/shifts.component').then((m) => m.ShiftsComponent),
+        path: 'settings',
+        data: {
+          breadcrumb: 'Settings',
+        },
+        children: [
+          {
+            path: 'positions',
+            data: {
+              breadcrumb: 'Positions',
+            },
+            loadComponent: () =>
+              import('./features/positions/positions.component').then((m) => m.PositionsComponent),
+          },
+          {
+            path: 'zones',
+            data: {
+              breadcrumb: 'Zones',
+            },
+            loadComponent: () =>
+              import('./features/zones/zones.component').then((m) => m.ZonesComponent),
+          },
+          {
+            path: 'shifts',
+            data: {
+              breadcrumb: 'Shifts',
+            },
+            loadComponent: () =>
+              import('./features/shifts/shifts.component').then((m) => m.ShiftsComponent),
+          },
+        ],
       },
       {
         path: '',
