@@ -2,7 +2,7 @@ from django.urls import path
 
 from organizations.views import ShiftViewSet, ZoneViewSet
 
-from .views import PositionViewSet, EmployeeViewSet
+from .views import EmployeeViewSet, PlanningWeekView, PositionViewSet
 
 
 position_list = PositionViewSet.as_view(
@@ -54,17 +54,21 @@ shift_detail = ShiftViewSet.as_view(
     }
 )
 
-employee_list = EmployeeViewSet.as_view({
-    "get": "list",
-    "post": "create",
-})
+employee_list = EmployeeViewSet.as_view(
+    {
+        "get": "list",
+        "post": "create",
+    }
+)
 
-employee_detail = EmployeeViewSet.as_view({
-    "get": "retrieve",
-    "put": "update",
-    "patch": "partial_update",
-    "delete": "destroy",
-})
+employee_detail = EmployeeViewSet.as_view(
+    {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy",
+    }
+)
 
 
 urlpatterns = [
@@ -107,5 +111,10 @@ urlpatterns = [
         "companies/<uuid:company_id>/employees/<uuid:pk>/",
         employee_detail,
         name="employee-detail",
+    ),
+    path(
+        "companies/<uuid:company_id>/planning-weeks/<str:week_start>/",
+        PlanningWeekView.as_view(),
+        name="planning-week-detail",
     ),
 ]

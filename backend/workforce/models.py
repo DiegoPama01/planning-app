@@ -130,3 +130,46 @@ class Employee(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+
+class PlanningAssignment(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="planning_assignments",
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="planning_assignments",
+    )
+    work_date = models.DateField()
+    zone = models.ForeignKey(
+        Zone,
+        on_delete=models.PROTECT,
+        related_name="planning_assignments",
+    )
+    shift = models.ForeignKey(
+        Shift,
+        on_delete=models.PROTECT,
+        related_name="planning_assignments",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "employee", "work_date"],
+                name="unique_planning_assignment_per_employee_date",
+            ),
+        ]
+        ordering = ["work_date", "employee__first_name", "employee__last_name"]
+
+    def __str__(self):
+        return f"{self.employee} - {self.work_date}"

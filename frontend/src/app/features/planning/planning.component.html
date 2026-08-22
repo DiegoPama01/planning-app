@@ -1,9 +1,163 @@
-<section class="flex flex-1 flex-col gap-4">
-  <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-    <div class="bg-muted/50 aspect-video rounded-xl"></div>
-    <div class="bg-muted/50 aspect-video rounded-xl"></div>
-    <div class="bg-muted/50 aspect-video rounded-xl"></div>
+<section class="flex min-w-0 flex-1 flex-col gap-6">
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div class="space-y-1">
+      <p class="text-muted-foreground text-sm font-medium uppercase tracking-[0.2em]">Planning</p>
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight">Weekly planner</h1>
+        <p class="text-muted-foreground text-sm">
+          Assign a zone and shift to each employee from Monday to Sunday.
+        </p>
+      </div>
+    </div>
+
+    <button hlmBtn type="button" variant="outline" (click)="reload()">Refresh data</button>
   </div>
 
-  <div class="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min"></div>
+  <hlm-card>
+    <div hlmCardContent class="flex flex-col gap-4 pt-6 lg:flex-row lg:items-end lg:justify-between">
+      <div class="space-y-1">
+        <p class="text-sm font-medium">Selected week</p>
+        <p class="text-muted-foreground text-sm">
+          {{ weekRangeLabel() }}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div class="space-y-2">
+          <label class="text-sm font-medium" for="planning-week-date">Week anchor date</label>
+          <input
+            hlmInput
+            id="planning-week-date"
+            type="date"
+            [value]="selectedDate()"
+            (input)="updateSelectedDate(($any($event.target)).value)"
+          />
+        </div>
+
+        <div class="flex gap-2">
+          <button hlmBtn type="button" variant="outline" (click)="goToPreviousWeek()">Previous week</button>
+          <button hlmBtn type="button" variant="outline" (click)="goToNextWeek()">Next week</button>
+          <button hlmBtn type="button" [disabled]="isSaving()" (click)="saveWeek()">
+            {{ isSaving() ? 'Saving...' : 'Save week' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </hlm-card>
+
+  @if (saveSuccess(); as successMessage) {
+    <hlm-card>
+      <div hlmCardContent class="py-4 text-sm text-emerald-700">{{ successMessage }}</div>
+    </hlm-card>
+  }
+
+  @if (saveError(); as saveErrorMessage) {
+    <hlm-card>
+      <div hlmCardContent class="py-4 text-sm text-red-600">{{ saveErrorMessage }}</div>
+    </hlm-card>
+  }
+
+  @if (planningResource.isLoading()) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-64 flex-col items-center justify-center gap-3 py-10 text-center">
+        <div class="bg-muted h-10 w-10 animate-pulse rounded-full"></div>
+        <div class="space-y-1">
+          <p class="font-medium">Loading planner</p>
+          <p class="text-muted-foreground text-sm">Fetching employees, zones, shifts, and positions.</p>
+        </div>
+      </div>
+    </hlm-card>
+  } @else if (planningError(); as errorMessage) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-64 flex-col items-center justify-center gap-4 py-10 text-center">
+        <div class="space-y-1">
+          <p class="font-medium">Planning is unavailable</p>
+          <p class="text-muted-foreground text-sm" aria-live="polite">{{ errorMessage }}</p>
+        </div>
+
+        <button hlmBtn type="button" variant="outline" (click)="reload()">Retry</button>
+      </div>
+    </hlm-card>
+  } @else if (planningRows().length === 0) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-64 flex-col items-center justify-center gap-3 py-10 text-center">
+        <div class="space-y-1">
+          <p class="font-medium">No active employees available</p>
+          <p class="text-muted-foreground text-sm">
+            Add active employees with allowed zones and shifts before planning the week.
+          </p>
+        </div>
+      </div>
+    </hlm-card>
+  } @else {
+    <div hlmTableContainer class="rounded-xl border bg-card">
+      <table hlmTable class="min-w-[1380px]">
+        <thead hlmTableHeader>
+          <tr hlmTableRow>
+            <th hlmTableHead class="sticky left-0 z-10 min-w-56 bg-card">Employee</th>
+            @for (day of planningDays(); track day.isoDate) {
+              <th hlmTableHead class="min-w-40 text-center">
+                <div class="flex flex-col items-center gap-0.5">
+                  <span>{{ day.label }}</span>
+                  <span class="text-muted-foreground text-xs font-normal">{{ day.dateLabel }}</span>
+                </div>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody hlmTableBody>
+          @for (employee of visibleEmployees(); track employee.id) {
+            <tr hlmTableRow>
+              <td hlmTableCell class="sticky left-0 z-10 bg-card align-top">
+                <div class="space-y-1">
+                  <p class="font-medium">{{ employee.fullName }}</p>
+                  <p class="text-muted-foreground text-xs">{{ employee.positionName }}</p>
+                </div>
+              </td>
+
+              @for (day of planningDays(); track day.isoDate) {
+                <td hlmTableCell class="align-top">
+                  <div class="space-y-3">
+                    <hlm-select
+                      [value]="getAssignment(employee.id, day.isoDate).zoneId"
+                      [itemToString]="zoneToLabel(employee)"
+                      (valueChange)="updateZone(employee.id, day.isoDate, $event ?? null)"
+                    >
+                      <hlm-select-trigger class="w-full">
+                        <hlm-select-value placeholder="Zone" />
+                      </hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        <hlm-select-group>
+                          @for (zone of employee.zones; track zone.id) {
+                            <hlm-select-item [value]="zone.id">{{ zone.name }}</hlm-select-item>
+                          }
+                        </hlm-select-group>
+                      </hlm-select-content>
+                    </hlm-select>
+
+                    <hlm-select
+                      [value]="getAssignment(employee.id, day.isoDate).shiftId"
+                      [itemToString]="shiftToLabel(employee)"
+                      (valueChange)="updateShift(employee.id, day.isoDate, $event ?? null)"
+                    >
+                      <hlm-select-trigger class="w-full">
+                        <hlm-select-value placeholder="Shift" />
+                      </hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        <hlm-select-group>
+                          @for (shift of employee.shifts; track shift.id) {
+                            <hlm-select-item [value]="shift.id">{{ shift.name }}</hlm-select-item>
+                          }
+                        </hlm-select-group>
+                      </hlm-select-content>
+                    </hlm-select>
+                  </div>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </section>

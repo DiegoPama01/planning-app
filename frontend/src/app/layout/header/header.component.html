@@ -2,23 +2,6 @@
   <div class="flex h-(--header-height) w-full items-center gap-2 px-4">
     <button hlmSidebarTrigger></button>
     <hlm-separator orientation="vertical" class="mr-2" />
-    <nav hlmBreadcrumb class="hidden sm:block">
-      <ol hlmBreadcrumbList>
-        @for (breadcrumb of breadcrumbs(); track breadcrumb.url; let last = $last) {
-          <li hlmBreadcrumbItem>
-            @if (last) {
-              <a hlmBreadcrumbPage>{{ breadcrumb.label }}</a>
-            } @else {
-              <a hlmBreadcrumbLink [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
-            }
-          </li>
-
-          @if (!last) {
-            <li hlmBreadcrumbSeparator></li>
-          }
-        }
-      </ol>
-    </nav>
 
     <div hlmInputGroup class="w-full sm:ml-auto sm:w-auto">
       <input hlmInputGroupInput placeholder="Type to search..." />
