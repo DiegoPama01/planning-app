@@ -13,49 +13,122 @@
     <button hlmBtn type="button" variant="outline" (click)="reload()">Refresh data</button>
   </div>
 
-  <hlm-card>
-    <div hlmCardContent class="flex flex-col gap-4 pt-6 lg:flex-row lg:items-end lg:justify-between">
-      <div class="space-y-1">
-        <p class="text-sm font-medium">Selected week</p>
-        <p class="text-muted-foreground text-sm">
+  <div class="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+    <div></div>
+
+    <div class="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-3 lg:justify-self-center">
+      <button hlmBtn type="button" variant="outline" size="icon" aria-label="Previous week" (click)="goToPreviousWeek()">
+        <ng-icon name="lucideChevronLeft" class="text-base" />
+      </button>
+      <hlm-date-picker [date]="selectedPlanningDate()" (dateChange)="updateSelectedDateFromPicker($event)">
+        <hlm-date-picker-trigger buttonId="planning-week-date" class="min-w-56 justify-center px-4 text-center">
           {{ weekRangeLabel() }}
-        </p>
-      </div>
-
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div class="space-y-2">
-          <label class="text-sm font-medium" for="planning-week-date">Week anchor date</label>
-          <input
-            hlmInput
-            id="planning-week-date"
-            type="date"
-            [value]="selectedDate()"
-            (input)="updateSelectedDate(($any($event.target)).value)"
-          />
-        </div>
-
-        <div class="flex gap-2">
-          <button hlmBtn type="button" variant="outline" (click)="goToPreviousWeek()">Previous week</button>
-          <button hlmBtn type="button" variant="outline" (click)="goToNextWeek()">Next week</button>
-          <button hlmBtn type="button" [disabled]="isSaving()" (click)="saveWeek()">
-            {{ isSaving() ? 'Saving...' : 'Save week' }}
-          </button>
-        </div>
-      </div>
+        </hlm-date-picker-trigger>
+      </hlm-date-picker>
+      <button hlmBtn type="button" variant="outline" size="icon" aria-label="Next week" (click)="goToNextWeek()">
+        <ng-icon name="lucideChevronRight" class="text-base" />
+      </button>
     </div>
-  </hlm-card>
 
-  @if (saveSuccess(); as successMessage) {
-    <hlm-card>
-      <div hlmCardContent class="py-4 text-sm text-emerald-700">{{ successMessage }}</div>
-    </hlm-card>
-  }
+    <div class="flex items-center justify-end gap-3 lg:justify-self-end">
+      <div hlmButtonGroup aria-label="Planning color mode">
+        <button hlmBtn type="button" [variant]="colorMode() === 'zone' ? 'default' : 'outline'" (click)="updateColorMode('zone')">
+          Zones
+        </button>
+        <button hlmBtn type="button" [variant]="colorMode() === 'shift' ? 'default' : 'outline'" (click)="updateColorMode('shift')">
+          Shifts
+        </button>
+      </div>
 
-  @if (saveError(); as saveErrorMessage) {
-    <hlm-card>
-      <div hlmCardContent class="py-4 text-sm text-red-600">{{ saveErrorMessage }}</div>
-    </hlm-card>
-  }
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        class="relative size-10 p-0"
+        aria-label="Open planning filters"
+        [hlmDropdownMenuTrigger]="planningFiltersMenu"
+        align="end"
+      >
+          <ng-icon name="lucideFilter" class="text-base" />
+          @if (hasActiveFilters()) {
+            <span class="bg-primary absolute top-2 right-2 h-2 w-2 rounded-full"></span>
+          }
+      </button>
+
+      <ng-template #planningFiltersMenu>
+        <hlm-dropdown-menu>
+          <hlm-dropdown-menu-label>Planning filters</hlm-dropdown-menu-label>
+          <hlm-dropdown-menu-separator />
+
+          <button hlmDropdownMenuItem [hlmDropdownMenuSubTrigger]="positionMenu" align="start" side="right">
+            <span>Position</span>
+            <hlm-dropdown-menu-item-sub-indicator />
+          </button>
+
+          <button hlmDropdownMenuItem [hlmDropdownMenuSubTrigger]="zoneMenu" align="start" side="right">
+            <span>Zone</span>
+            <hlm-dropdown-menu-item-sub-indicator />
+          </button>
+
+          <button hlmDropdownMenuItem [hlmDropdownMenuSubTrigger]="shiftMenu" align="start" side="right">
+            <span>Shift</span>
+            <hlm-dropdown-menu-item-sub-indicator />
+          </button>
+        </hlm-dropdown-menu>
+      </ng-template>
+
+      <ng-template #positionMenu>
+        <hlm-dropdown-menu-sub>
+          <hlm-dropdown-menu-label>Position</hlm-dropdown-menu-label>
+          <hlm-dropdown-menu-separator />
+          <button hlmDropdownMenuRadio [checked]="selectedPositionId() === null" (click)="updatePositionFilter(null)">
+            <hlm-dropdown-menu-radio-indicator />
+            <span>All positions</span>
+          </button>
+          @for (option of positionOptions(); track option.id) {
+            <button hlmDropdownMenuRadio [checked]="selectedPositionId() === option.id" (click)="updatePositionFilter(option.id)">
+              <hlm-dropdown-menu-radio-indicator />
+              <span>{{ option.label }}</span>
+            </button>
+          }
+        </hlm-dropdown-menu-sub>
+      </ng-template>
+
+      <ng-template #zoneMenu>
+        <hlm-dropdown-menu-sub>
+          <hlm-dropdown-menu-label>Zone</hlm-dropdown-menu-label>
+          <hlm-dropdown-menu-separator />
+          <button hlmDropdownMenuRadio [checked]="selectedZoneId() === null" (click)="updateZoneFilter(null)">
+            <hlm-dropdown-menu-radio-indicator />
+            <span>All zones</span>
+          </button>
+          @for (option of zoneFilterOptions(); track option.id) {
+            <button hlmDropdownMenuRadio [checked]="selectedZoneId() === option.id" (click)="updateZoneFilter(option.id)">
+              <hlm-dropdown-menu-radio-indicator />
+              <span>{{ option.label }}</span>
+            </button>
+          }
+        </hlm-dropdown-menu-sub>
+      </ng-template>
+
+      <ng-template #shiftMenu>
+        <hlm-dropdown-menu-sub>
+          <hlm-dropdown-menu-label>Shift</hlm-dropdown-menu-label>
+          <hlm-dropdown-menu-separator />
+          <button hlmDropdownMenuRadio [checked]="selectedShiftId() === null" (click)="updateShiftFilter(null)">
+            <hlm-dropdown-menu-radio-indicator />
+            <span>All shifts</span>
+          </button>
+          @for (option of shiftFilterOptions(); track option.id) {
+            <button hlmDropdownMenuRadio [checked]="selectedShiftId() === option.id" (click)="updateShiftFilter(option.id)">
+              <hlm-dropdown-menu-radio-indicator />
+              <span>{{ option.label }}</span>
+            </button>
+          }
+        </hlm-dropdown-menu-sub>
+      </ng-template>
+    </div>
+  </div>
 
   @if (planningResource.isLoading()) {
     <hlm-card>
@@ -89,14 +162,29 @@
         </div>
       </div>
     </hlm-card>
+  } @else if (visibleEmployees().length === 0) {
+    <hlm-card>
+      <div hlmCardContent class="flex min-h-48 flex-col items-center justify-center gap-3 py-10 text-center">
+        <div class="space-y-1">
+          <p class="font-medium">No employees match these filters</p>
+          <p class="text-muted-foreground text-sm">
+            Try another position, zone, or shift to see matching planning rows.
+          </p>
+        </div>
+
+        <button hlmBtn type="button" variant="outline" [disabled]="!hasActiveFilters()" (click)="clearFilters()">
+          Clear filters
+        </button>
+      </div>
+    </hlm-card>
   } @else {
     <div hlmTableContainer class="rounded-xl border bg-card">
       <table hlmTable class="min-w-[1380px]">
-        <thead hlmTableHeader>
-          <tr hlmTableRow>
-            <th hlmTableHead class="sticky left-0 z-10 min-w-56 bg-card">Employee</th>
+        <thead hlmTableHeader class="border-b-0">
+          <tr hlmTableRow class="border-b-0">
+            <th hlmTableHead class="sticky left-0 z-10 min-w-56 border-b-0 bg-card">Employee</th>
             @for (day of planningDays(); track day.isoDate) {
-              <th hlmTableHead class="min-w-40 text-center">
+              <th hlmTableHead class="min-w-40 border-b-0 text-center">
                 <div class="flex flex-col items-center gap-0.5">
                   <span>{{ day.label }}</span>
                   <span class="text-muted-foreground text-xs font-normal">{{ day.dateLabel }}</span>
@@ -116,42 +204,95 @@
               </td>
 
               @for (day of planningDays(); track day.isoDate) {
-                <td hlmTableCell class="align-top">
-                  <div class="space-y-3">
-                    <hlm-select
-                      [value]="getAssignment(employee.id, day.isoDate).zoneId"
-                      [itemToString]="zoneToLabel(employee)"
-                      (valueChange)="updateZone(employee.id, day.isoDate, $event ?? null)"
+                <td hlmTableCell class="h-12 p-0 align-top">
+                  <hlm-popover
+                    sideOffset="8"
+                    align="start"
+                    [state]="openPopoverKey() === assignmentKey(employee.id, day.isoDate) ? 'open' : 'closed'"
+                    (stateChanged)="handlePopoverStateChange(assignmentKey(employee.id, day.isoDate), $event, employee.id, day.isoDate)"
+                  >
+                    <button
+                      hlmPopoverTrigger
+                      hlmBtn
+                      type="button"
+                      variant="ghost"
+                      [class]="getCellButtonClass(employee, day.isoDate)"
+                      [attr.style]="getCellSurfaceStyle(employee, day.isoDate)"
+                      (click)="openCellEditor(employee.id, day.isoDate)"
                     >
-                      <hlm-select-trigger class="w-full">
-                        <hlm-select-value placeholder="Zone" />
-                      </hlm-select-trigger>
-                      <hlm-select-content *hlmSelectPortal>
-                        <hlm-select-group>
-                          @for (zone of employee.zones; track zone.id) {
-                            <hlm-select-item [value]="zone.id">{{ zone.name }}</hlm-select-item>
-                          }
-                        </hlm-select-group>
-                      </hlm-select-content>
-                    </hlm-select>
+                      @if (getCellSummary(employee, day.isoDate).empty) {
+                        <div class="text-muted-foreground flex h-full w-full items-center justify-center text-sm">+ Assign</div>
+                      } @else {
+                        <div class="flex w-full flex-col justify-center gap-1">
+                          <span class="truncate text-sm font-medium">{{ getCellSummary(employee, day.isoDate).zone }}</span>
+                          <span class="truncate text-xs" [class]="getCellSecondaryTextClass(employee, day.isoDate)">{{ getCellSummary(employee, day.isoDate).shift }}</span>
+                        </div>
+                      }
+                    </button>
 
-                    <hlm-select
-                      [value]="getAssignment(employee.id, day.isoDate).shiftId"
-                      [itemToString]="shiftToLabel(employee)"
-                      (valueChange)="updateShift(employee.id, day.isoDate, $event ?? null)"
-                    >
-                      <hlm-select-trigger class="w-full">
-                        <hlm-select-value placeholder="Shift" />
-                      </hlm-select-trigger>
-                      <hlm-select-content *hlmSelectPortal>
-                        <hlm-select-group>
-                          @for (shift of employee.shifts; track shift.id) {
-                            <hlm-select-item [value]="shift.id">{{ shift.name }}</hlm-select-item>
-                          }
-                        </hlm-select-group>
-                      </hlm-select-content>
-                    </hlm-select>
-                  </div>
+                    <hlm-popover-content class="grid w-72 gap-4" *hlmPopoverPortal>
+                      <div class="space-y-4">
+                        <div class="space-y-2">
+                          <label class="text-sm font-medium">Zone</label>
+                          <hlm-select
+                            [value]="cellEditor()?.zoneId"
+                            [itemToString]="zoneToLabel(employee)"
+                            (valueChange)="updateEditorZone($event ?? null)"
+                          >
+                            <hlm-select-trigger class="w-full">
+                              <hlm-select-value placeholder="Zone" />
+                            </hlm-select-trigger>
+                            <hlm-select-content *hlmSelectPortal>
+                              <hlm-select-group>
+                                @for (zone of employee.zones; track zone.id) {
+                                  <hlm-select-item [value]="zone.id">{{ zone.name }}</hlm-select-item>
+                                }
+                              </hlm-select-group>
+                            </hlm-select-content>
+                          </hlm-select>
+                        </div>
+
+                        <div class="space-y-2">
+                          <label class="text-sm font-medium">Shift</label>
+                          <hlm-select
+                            [value]="cellEditor()?.shiftId"
+                            [itemToString]="shiftToLabel(employee)"
+                            (valueChange)="updateEditorShift($event ?? null)"
+                          >
+                            <hlm-select-trigger class="w-full">
+                              <hlm-select-value placeholder="Shift" />
+                            </hlm-select-trigger>
+                            <hlm-select-content *hlmSelectPortal>
+                              <hlm-select-group>
+                                @for (shift of employee.shifts; track shift.id) {
+                                  <hlm-select-item [value]="shift.id">{{ shift.name }}</hlm-select-item>
+                                }
+                              </hlm-select-group>
+                            </hlm-select-content>
+                          </hlm-select>
+                        </div>
+
+                        <div class="space-y-2">
+                          <label class="text-sm font-medium">Note</label>
+                          <textarea
+                            class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-24 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                            placeholder="Add details for this assignment"
+                            [value]="cellEditor()?.note ?? ''"
+                            (input)="updateEditorNote(($any($event.target)).value)"
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center justify-between gap-2">
+                        <button hlmBtn type="button" variant="ghost" [disabled]="isSaving()" (click)="clearCellAssignment()">
+                          Clear
+                        </button>
+                        <button hlmBtn type="button" [disabled]="isSaving()" (click)="saveCellAssignment()">
+                          {{ isSaving() ? 'Saving...' : 'Save' }}
+                        </button>
+                      </div>
+                    </hlm-popover-content>
+                  </hlm-popover>
                 </td>
               }
             </tr>

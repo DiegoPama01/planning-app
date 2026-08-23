@@ -6,7 +6,6 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
-import { HlmInputGroupImports } from '@spartan-ng/helm/input-group';
 import { ShiftUpsertPayload } from './shifts.model';
 
 @Component({
@@ -19,7 +18,6 @@ import { ShiftUpsertPayload } from './shifts.model';
     HlmCardImports,
     HlmFieldImports,
     HlmInputImports,
-    HlmInputGroupImports,
   ],
   providers: [provideIcons({ lucideClock3 })],
   changeDetection: ChangeDetectionStrategy.OnPush,
