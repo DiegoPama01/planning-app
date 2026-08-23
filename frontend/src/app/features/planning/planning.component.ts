@@ -8,11 +8,18 @@ import {
   signal,
 } from '@angular/core';
 import { firstValueFrom, forkJoin } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft, lucideChevronRight, lucideFilter } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmButtonGroupImports } from '@spartan-ng/helm/button-group';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmPopoverImports } from '@spartan-ng/helm/popover';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmTableImports } from '@spartan-ng/helm/table';
+import { toast } from 'ngx-sonner';
 import { EmployeesService } from '../employees/employees.service';
 import { PositionsService } from '../positions/positions.service';
 import { ShiftsService } from '../shifts/shifts.service';
@@ -33,20 +40,38 @@ interface PlanningDayColumn {
 interface PlanningEmployeeRow {
   id: string;
   fullName: string;
+  positionId: string;
   positionName: string;
   zones: Array<{ id: string; name: string; color: string }>;
   shifts: Array<{ id: string; name: string; startTime: string; endTime: string; color: string }>;
 }
 
+interface PlanningFilterOption {
+  id: string;
+  label: string;
+}
+
+type PlanningColorMode = 'zone' | 'shift';
+
 interface AssignmentCellState {
   assignmentId: string | null;
   zoneId: string | null;
   shiftId: string | null;
+  note: string;
+}
+
+interface CellEditorState {
+  employeeId: string;
+  isoDate: string;
+  zoneId: string | null;
+  shiftId: string | null;
+  note: string;
 }
 
 @Component({
   selector: 'app-planning',
-  imports: [HlmButtonImports, HlmCardImports, HlmInputImports, HlmSelectImports, HlmTableImports],
+  imports: [NgIcon, HlmButtonImports, HlmButtonGroupImports, HlmCardImports, HlmDatePickerImports, HlmDropdownMenuImports, HlmInputImports, HlmPopoverImports, HlmSelectImports, HlmTableImports],
+  providers: [provideIcons({ lucideChevronLeft, lucideChevronRight, lucideFilter })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planning.component.html',
 })
@@ -58,9 +83,15 @@ export class PlanningComponent {
   private readonly planningService = inject(PlanningService);
   protected readonly selectedDate = signal(this.formatDateForInput(new Date()));
   protected readonly assignments = signal<Record<string, AssignmentCellState>>({});
+  protected readonly openPopoverKey = signal<string | null>(null);
+  protected readonly cellEditor = signal<CellEditorState | null>(null);
   protected readonly saveError = signal<string | null>(null);
   protected readonly saveSuccess = signal<string | null>(null);
   protected readonly isSaving = signal(false);
+  protected readonly colorMode = signal<PlanningColorMode>('zone');
+  protected readonly selectedPositionId = signal<string | null>(null);
+  protected readonly selectedZoneId = signal<string | null>(null);
+  protected readonly selectedShiftId = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -100,6 +131,7 @@ export class PlanningComponent {
       .map((employee) => ({
         id: employee.id,
         fullName: `${employee.first_name} ${employee.last_name}`.trim() || employee.first_name,
+        positionId: employee.position,
         positionName: positionsById.get(employee.position)?.name ?? 'Unknown position',
         zones: employee.allowed_zones
           .map((zoneId) => zonesById.get(zoneId))
@@ -138,6 +170,7 @@ export class PlanningComponent {
   });
 
   protected readonly weekStart = computed(() => this.startOfWeek(this.parseDate(this.selectedDate())));
+  protected readonly selectedPlanningDate = computed(() => this.parseDate(this.selectedDate()));
   protected readonly weekStartIso = computed(() => this.formatDateForInput(this.weekStart()));
   protected readonly weekRangeLabel = computed(() => this.formatWeekRange(this.weekStart()));
   protected readonly planningDays = computed<PlanningDayColumn[]>(() => {
@@ -169,6 +202,10 @@ export class PlanningComponent {
     this.saveSuccess.set(null);
   }
 
+  protected updateSelectedDateFromPicker(value: Date | null | undefined): void {
+    this.updateSelectedDate(value ? this.formatDateForInput(value) : this.formatDateForInput(new Date()));
+  }
+
   protected goToPreviousWeek(): void {
     const date = new Date(this.weekStart());
     date.setDate(date.getDate() - 7);
@@ -185,7 +222,106 @@ export class PlanningComponent {
     this.saveSuccess.set(null);
   }
 
-  protected readonly visibleEmployees = computed(() => this.planningRows());
+  protected readonly positionOptions = computed<PlanningFilterOption[]>(() => {
+    const options = new Map<string, string>();
+
+    for (const employee of this.planningRows()) {
+      options.set(employee.positionId, employee.positionName);
+    }
+
+    return Array.from(options.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  });
+  protected readonly zoneFilterOptions = computed<PlanningFilterOption[]>(() => {
+    const options = new Map<string, string>();
+
+    for (const employee of this.planningRows()) {
+      for (const zone of employee.zones) {
+        options.set(zone.id, zone.name);
+      }
+    }
+
+    return Array.from(options.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  });
+  protected readonly shiftFilterOptions = computed<PlanningFilterOption[]>(() => {
+    const options = new Map<string, string>();
+
+    for (const employee of this.planningRows()) {
+      for (const shift of employee.shifts) {
+        options.set(shift.id, shift.name);
+      }
+    }
+
+    return Array.from(options.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  });
+
+  protected readonly visibleEmployees = computed(() => {
+    const positionId = this.selectedPositionId();
+    const zoneId = this.selectedZoneId();
+    const shiftId = this.selectedShiftId();
+
+    return this.planningRows().filter((employee) => {
+      if (positionId && employee.positionId !== positionId) {
+        return false;
+      }
+
+      if (zoneId && !employee.zones.some((zone) => zone.id === zoneId)) {
+        return false;
+      }
+
+      if (shiftId && !employee.shifts.some((shift) => shift.id === shiftId)) {
+        return false;
+      }
+
+      return true;
+    });
+  });
+  protected readonly hasActiveFilters = computed(() => Boolean(
+    this.selectedPositionId() || this.selectedZoneId() || this.selectedShiftId(),
+  ));
+
+  protected updateColorMode(mode: string | null | undefined): void {
+    this.colorMode.set(mode === 'shift' ? 'shift' : 'zone');
+  }
+
+  protected updatePositionFilter(positionId: string | null): void {
+    this.selectedPositionId.set(positionId);
+  }
+
+  protected updateZoneFilter(zoneId: string | null): void {
+    this.selectedZoneId.set(zoneId);
+  }
+
+  protected updateShiftFilter(shiftId: string | null): void {
+    this.selectedShiftId.set(shiftId);
+  }
+
+  protected clearFilters(): void {
+    this.selectedPositionId.set(null);
+    this.selectedZoneId.set(null);
+    this.selectedShiftId.set(null);
+  }
+
+  protected readonly colorModeToLabel = (value: string | null | undefined) => {
+    if (value === 'shift') {
+      return 'Shift color';
+    }
+
+    return 'Zone color';
+  };
+
+  protected readonly filterOptionToLabel = (options: () => PlanningFilterOption[]) => (value: string | null | undefined) => {
+    if (!value) {
+      return '';
+    }
+
+    return options().find((option) => option.id === value)?.label ?? '';
+  };
 
   protected readonly zoneToLabel = (employee: PlanningEmployeeRow) => (value: string | null | undefined) => {
     if (!value) {
@@ -208,16 +344,17 @@ export class PlanningComponent {
       assignmentId: null,
       zoneId: null,
       shiftId: null,
+      note: '',
     };
   }
 
   protected updateZone(employeeId: string, isoDate: string, zoneId: string | null): void {
     this.assignments.update((state) => ({
       ...state,
-      [this.assignmentKey(employeeId, isoDate)]: {
-        ...this.getAssignment(employeeId, isoDate),
-        zoneId,
-      },
+        [this.assignmentKey(employeeId, isoDate)]: {
+          ...this.getAssignment(employeeId, isoDate),
+          zoneId,
+        },
     }));
     this.saveSuccess.set(null);
   }
@@ -225,15 +362,137 @@ export class PlanningComponent {
   protected updateShift(employeeId: string, isoDate: string, shiftId: string | null): void {
     this.assignments.update((state) => ({
       ...state,
-      [this.assignmentKey(employeeId, isoDate)]: {
-        ...this.getAssignment(employeeId, isoDate),
-        shiftId,
-      },
+        [this.assignmentKey(employeeId, isoDate)]: {
+          ...this.getAssignment(employeeId, isoDate),
+          shiftId,
+        },
     }));
     this.saveSuccess.set(null);
   }
 
+  protected openCellEditor(employeeId: string, isoDate: string): void {
+    const assignment = this.getAssignment(employeeId, isoDate);
+
+    this.cellEditor.set({
+      employeeId,
+      isoDate,
+      zoneId: assignment.zoneId,
+      shiftId: assignment.shiftId,
+      note: assignment.note,
+    });
+    this.openPopoverKey.set(this.assignmentKey(employeeId, isoDate));
+    this.saveError.set(null);
+  }
+
+  protected handlePopoverStateChange(cellKey: string, state: string, employeeId: string, isoDate: string): void {
+    if (state === 'open') {
+      this.openCellEditor(employeeId, isoDate);
+      return;
+    }
+
+    if (this.openPopoverKey() === cellKey) {
+      this.openPopoverKey.set(null);
+      this.cellEditor.set(null);
+    }
+  }
+
+  protected updateEditorZone(zoneId: string | null): void {
+    this.cellEditor.update((state) => (state ? { ...state, zoneId } : state));
+  }
+
+  protected updateEditorShift(shiftId: string | null): void {
+    this.cellEditor.update((state) => (state ? { ...state, shiftId } : state));
+  }
+
+  protected updateEditorNote(note: string): void {
+    this.cellEditor.update((state) => (state ? { ...state, note } : state));
+  }
+
+  protected async saveCellAssignment(): Promise<void> {
+    const editor = this.cellEditor();
+
+    if (!editor) {
+      return;
+    }
+
+    this.assignments.update((state) => ({
+      ...state,
+        [this.assignmentKey(editor.employeeId, editor.isoDate)]: {
+          ...this.getAssignment(editor.employeeId, editor.isoDate),
+          zoneId: editor.zoneId,
+          shiftId: editor.shiftId,
+          note: editor.note.trim(),
+        },
+    }));
+
+    await this.persistCurrentWeek();
+  }
+
+  protected async clearCellAssignment(): Promise<void> {
+    const editor = this.cellEditor();
+
+    if (!editor) {
+      return;
+    }
+
+    this.assignments.update((state) => {
+      const next = { ...state };
+      delete next[this.assignmentKey(editor.employeeId, editor.isoDate)];
+      return next;
+    });
+
+    await this.persistCurrentWeek();
+  }
+
+  protected getCellSummary(employee: PlanningEmployeeRow, isoDate: string): { zone: string; shift: string; empty: boolean } {
+    const assignment = this.getAssignment(employee.id, isoDate);
+    const zone = employee.zones.find((item) => item.id === assignment.zoneId)?.name ?? '';
+    const shift = employee.shifts.find((item) => item.id === assignment.shiftId)?.name ?? '';
+
+    return {
+      zone,
+      shift,
+      empty: !zone && !shift,
+    };
+  }
+
+  protected getCellBackgroundColor(employee: PlanningEmployeeRow, isoDate: string): string | null {
+    const assignment = this.getAssignment(employee.id, isoDate);
+
+    if (this.colorMode() === 'shift') {
+      return employee.shifts.find((item) => item.id === assignment.shiftId)?.color ?? null;
+    }
+
+    return employee.zones.find((item) => item.id === assignment.zoneId)?.color ?? null;
+  }
+
+  protected getCellSurfaceStyle(employee: PlanningEmployeeRow, isoDate: string): string | null {
+    const color = this.getCellBackgroundColor(employee, isoDate);
+
+    if (!color) {
+      return null;
+    }
+
+    return `background-color: ${this.toTransparentColor(color, 0.18)}; color: #111827;`;
+  }
+
+  protected getCellButtonClass(employee: PlanningEmployeeRow, isoDate: string): string {
+    const baseClass = 'h-full min-h-12 w-full cursor-pointer items-start justify-start rounded-none border-0 px-3 py-2 text-left shadow-none transition-colors duration-150';
+
+    return this.getCellBackgroundColor(employee, isoDate)
+      ? `${baseClass} hover:brightness-75 focus-visible:brightness-75`
+      : `${baseClass} hover:bg-muted/90 focus-visible:bg-muted/90`;
+  }
+
+  protected getCellSecondaryTextClass(employee: PlanningEmployeeRow, isoDate: string): string {
+    return this.getCellBackgroundColor(employee, isoDate) ? 'text-black/70' : 'text-muted-foreground';
+  }
+
   protected async saveWeek(): Promise<void> {
+    await this.persistCurrentWeek();
+  }
+
+  private async persistCurrentWeek(): Promise<void> {
     const payloadAssignments = this.buildWritePayload();
 
     this.isSaving.set(true);
@@ -249,8 +508,12 @@ export class PlanningComponent {
 
       this.syncAssignments(response, true);
       this.saveSuccess.set('Planning saved for the selected week.');
+      toast.success('Planning saved for the selected week.');
+      this.openPopoverKey.set(null);
+      this.cellEditor.set(null);
     } catch {
       this.saveError.set('We could not save planning changes. Please review the assignments and try again.');
+      toast.error('We could not save planning changes.');
     } finally {
       this.isSaving.set(false);
     }
@@ -302,7 +565,44 @@ export class PlanningComponent {
     return `${formatter.format(startDate)} - ${formatter.format(endDate)}`;
   }
 
-  private assignmentKey(employeeId: string, isoDate: string): string {
+  private toTransparentColor(color: string, alpha: number): string {
+    const normalized = color.trim();
+
+    if (/^#([\da-f]{3}|[\da-f]{6})$/i.test(normalized)) {
+      let hex = normalized.slice(1);
+
+      if (hex.length === 3) {
+        hex = hex
+          .split('')
+          .map((char) => char + char)
+          .join('');
+      }
+
+      const red = Number.parseInt(hex.slice(0, 2), 16);
+      const green = Number.parseInt(hex.slice(2, 4), 16);
+      const blue = Number.parseInt(hex.slice(4, 6), 16);
+
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
+    const rgbMatch = normalized.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i);
+
+    if (rgbMatch) {
+      const [, red, green, blue] = rgbMatch;
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
+    const rgbaMatch = normalized.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/i);
+
+    if (rgbaMatch) {
+      const [, red, green, blue] = rgbaMatch;
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
+    return color;
+  }
+
+  protected assignmentKey(employeeId: string, isoDate: string): string {
     return `${employeeId}:${isoDate}`;
   }
 
@@ -314,6 +614,7 @@ export class PlanningComponent {
         assignmentId: assignment.id,
         zoneId: assignment.zone,
         shiftId: assignment.shift,
+        note: assignment.note,
       };
     }
 
@@ -338,6 +639,7 @@ export class PlanningComponent {
           work_date: isoDate ?? '',
           zone: value.zoneId ?? '',
           shift: value.shiftId ?? '',
+          note: value.note.trim(),
         };
       });
   }

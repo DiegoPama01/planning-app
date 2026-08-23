@@ -153,6 +153,7 @@ class PlanningWeekView(APIView):
 
             instance.zone = assignment_data["zone"]
             instance.shift = assignment_data["shift"]
+            instance.note = assignment_data.get("note", "")
             instance.save()
             saved_assignments.append(instance)
 

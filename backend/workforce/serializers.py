@@ -66,6 +66,7 @@ class PlanningAssignmentSerializer(serializers.ModelSerializer):
             "work_date",
             "zone",
             "shift",
+            "note",
         )
         read_only_fields = ("id",)
 
@@ -81,6 +82,7 @@ class PlanningAssignmentWriteSerializer(serializers.Serializer):
     work_date = serializers.DateField()
     zone = serializers.PrimaryKeyRelatedField(queryset=Zone.objects.none())
     shift = serializers.PrimaryKeyRelatedField(queryset=Shift.objects.none())
+    note = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

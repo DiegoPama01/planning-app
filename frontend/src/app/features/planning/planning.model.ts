@@ -4,6 +4,7 @@ export interface PlanningAssignment {
   work_date: string;
   zone: string;
   shift: string;
+  note: string;
 }
 
 export interface PlanningWeekResponse {
@@ -17,6 +18,7 @@ export interface PlanningWeekWriteAssignment {
   work_date: string;
   zone: string;
   shift: string;
+  note: string;
 }
 
 export interface PlanningWeekWritePayload {

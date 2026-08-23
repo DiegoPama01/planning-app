@@ -38,5 +38,5 @@ function addAuthorizationHeader(req: Parameters<HttpInterceptorFn>[0], accessTok
 }
 
 function isAuthRequest(url: string): boolean {
-  return url.includes('/auth/token/') || url.includes('/auth/me/');
+  return url.includes('/auth/token/');
 }
