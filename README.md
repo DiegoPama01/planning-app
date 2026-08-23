@@ -8,6 +8,12 @@
 4. Si necesitas un usuario admin: `docker compose exec backend python manage.py createsuperuser`.
 5. Accede al frontend en `http://localhost:4200` y al backend en `http://localhost:8000`.
 
+## Produccion / VPS
+
+- Tienes una plantilla lista en `.env.production`.
+- Antes de subirla al VPS, cambia como minimo `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD`, dominios y cualquier valor de Authentik.
+- Si usas el stack Docker tambien en VPS, normalmente copiaras ese archivo como `.env` en el servidor antes de levantar los servicios.
+
 ## Servicios Docker
 
 - `postgres`: base de datos PostgreSQL local.
