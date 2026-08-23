@@ -10,12 +10,12 @@ const templatePath = path.join(frontendRoot, 'public', 'app-config.template.json
 const outputPath = path.join(frontendRoot, 'public', 'app-config.json');
 
 const defaults = {
-  FRONTEND_PUBLIC_API_BASE_URL: 'http://127.0.0.1:8000/api',
+  FRONTEND_PUBLIC_API_BASE_URL: '/api',
   FRONTEND_PUBLIC_AUTH_ENABLED: 'false',
   FRONTEND_PUBLIC_AUTH_ISSUER_URL: '',
   FRONTEND_PUBLIC_AUTH_CLIENT_ID: '',
-  FRONTEND_PUBLIC_AUTH_REDIRECT_URI: 'http://localhost:4200',
-  FRONTEND_PUBLIC_AUTH_POST_LOGOUT_REDIRECT_URI: 'http://localhost:4200',
+  FRONTEND_PUBLIC_AUTH_REDIRECT_URI: '/',
+  FRONTEND_PUBLIC_AUTH_POST_LOGOUT_REDIRECT_URI: '/',
   FRONTEND_PUBLIC_AUTH_SCOPES: 'openid profile email',
   FRONTEND_PUBLIC_AUTH_RESPONSE_TYPE: 'code',
 };

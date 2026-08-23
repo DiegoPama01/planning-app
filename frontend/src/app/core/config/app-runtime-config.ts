@@ -12,13 +12,13 @@ export type AppRuntimeConfig = {
 };
 
 export const defaultAppRuntimeConfig: AppRuntimeConfig = {
-  apiBaseUrl: 'http://127.0.0.1:8000/api',
+  apiBaseUrl: '/api',
   auth: {
     enabled: false,
     issuerUrl: '',
     clientId: '',
-    redirectUri: 'http://localhost:4200',
-    postLogoutRedirectUri: 'http://localhost:4200',
+    redirectUri: '/',
+    postLogoutRedirectUri: '/',
     scopes: 'openid profile email',
     responseType: 'code',
   },
