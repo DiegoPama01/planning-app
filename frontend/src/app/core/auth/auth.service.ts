@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, finalize, map, Observable, shareReplay, tap, throwError } from 'rxjs';
+import { catchError, finalize, firstValueFrom, map, Observable, shareReplay, tap, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api/api.config';
 import {
   CompanyMembership,
@@ -66,6 +66,20 @@ export class AuthService {
 
   hydrateContext(): void {
     this.authContext.hydrate();
+  }
+
+  async syncSession(): Promise<void> {
+    this.hydrateContext();
+
+    if (!this.getAccessToken()) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.loadCurrentUser());
+    } catch {
+      this.logout();
+    }
   }
 
   setActiveCompany(company: CompanyMembership | null): void {

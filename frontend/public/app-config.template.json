@@ -1,0 +1,12 @@
+{
+  "apiBaseUrl": "${FRONTEND_PUBLIC_API_BASE_URL}",
+  "auth": {
+    "enabled": ${FRONTEND_PUBLIC_AUTH_ENABLED},
+    "issuerUrl": "${FRONTEND_PUBLIC_AUTH_ISSUER_URL}",
+    "clientId": "${FRONTEND_PUBLIC_AUTH_CLIENT_ID}",
+    "redirectUri": "${FRONTEND_PUBLIC_AUTH_REDIRECT_URI}",
+    "postLogoutRedirectUri": "${FRONTEND_PUBLIC_AUTH_POST_LOGOUT_REDIRECT_URI}",
+    "scopes": "${FRONTEND_PUBLIC_AUTH_SCOPES}",
+    "responseType": "${FRONTEND_PUBLIC_AUTH_RESPONSE_TYPE}"
+  }
+}

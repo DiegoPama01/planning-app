@@ -49,10 +49,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
             self.fields["position"].queryset = Position.objects.filter(
                 company=company,
             )
-            self.fields["allowed_zones"].queryset = Zone.objects.filter(
+            self.fields["allowed_zones"].child_relation.queryset = Zone.objects.filter(
                 company=company,
             )
-            self.fields["allowed_shifts"].queryset = Shift.objects.filter(
+            self.fields[
+                "allowed_shifts"
+            ].child_relation.queryset = Shift.objects.filter(
                 company=company,
             )
 

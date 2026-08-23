@@ -17,6 +17,9 @@ venv/
 .env.*
 !.env.example
 
+# Generated frontend config
+frontend/public/app-config.json
+
 # IDE
 .idea/
 .vscode/
