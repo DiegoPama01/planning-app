@@ -11,10 +11,10 @@
 ## Produccion / VPS
 
 - Tienes una plantilla lista en `.env.production`.
-- Antes de subirla al VPS, cambia como minimo `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD`, dominios y cualquier valor de Authentik.
+- Antes de subirla al VPS, cambia como minimo `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD`, el nombre real del contenedor PostgreSQL existente y cualquier valor de Authentik.
 - Si usas el stack Docker tambien en VPS, normalmente copiaras ese archivo como `.env` en el servidor antes de levantar los servicios.
 - Para VPS usa `docker-compose.prod.yml`, no el compose local.
-- El stack de produccion publica el frontend en `3000` y el backend en `8000`.
+- El stack de produccion no publica puertos; `frontend` y `backend` quedan accesibles solo en la red Docker `infra` para que Caddy los exponga.
 - `nginx` dentro del contenedor de frontend hace proxy de `/api` y `/auth` hacia Django.
 - El backend en produccion corre con `gunicorn` y se conecta al PostgreSQL que ya tengas levantado fuera de este stack.
 - Flujo recomendado en el VPS:
@@ -26,7 +26,7 @@ docker compose -f docker-compose.prod.yml exec backend python manage.py migrate
 docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
 
-- Con la IP actual, la app quedaria accesible en `http://198.244.150.237:3000`.
+- La URL publica final la servira Caddy; este stack ya no expone puertos directamente.
 
 ## Servicios Docker
 
