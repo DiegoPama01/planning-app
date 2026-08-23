@@ -7,10 +7,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     networks:
       - planning_prod_net
+      - infra
 
   frontend:
     build:
@@ -33,7 +34,10 @@ services:
       - "3000:80"
     networks:
       - planning_prod_net
+      - infra
 
 networks:
   planning_prod_net:
     driver: bridge
+  infra:
+    external: true
