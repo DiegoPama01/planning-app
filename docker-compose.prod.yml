@@ -1,22 +1,4 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: planning-app-postgres-prod
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -25,12 +7,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      POSTGRES_HOST: postgres
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable&connect_timeout=5&conn_max_age=300
-    depends_on:
-      postgres:
-        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - planning_prod_net
 
   frontend:
     build:
@@ -50,7 +30,10 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "3000:80"
+    networks:
+      - planning_prod_net
 
-volumes:
-  postgres_prod_data:
+networks:
+  planning_prod_net:
+    driver: bridge
