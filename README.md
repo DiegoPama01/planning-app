@@ -1,57 +1,46 @@
 # Planning App
 
-## Entorno local
+## Entorno
 
-1. Revisa `.env` y ajusta credenciales si hace falta.
-2. Levanta toda la app con `docker compose up --build`.
-3. Ejecuta migraciones con `docker compose exec backend python manage.py migrate`.
-4. Si necesitas un usuario admin: `docker compose exec backend python manage.py createsuperuser`.
-5. Accede al frontend en `http://localhost:4200` y al backend en `http://localhost:8000`.
+1. Copia `.env.example` a `.env`.
+2. Rellena `.env` con la URL real de PostgreSQL y la configuracion real de Authentik del VPS.
+3. Levanta solo `backend` y `frontend` con el metodo que prefieras.
+4. Ejecuta migraciones en el backend con `python manage.py migrate`.
+5. Si necesitas un usuario admin: `python manage.py createsuperuser`.
 
-## Produccion / VPS
+Datos conocidos del despliegue actual:
 
-- Tienes una plantilla lista en `.env.production`.
-- Antes de subirla al VPS, cambia como minimo `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD`, el nombre real del contenedor PostgreSQL existente y cualquier valor de Authentik.
-- Si usas el stack Docker tambien en VPS, normalmente copiaras ese archivo como `.env` en el servidor antes de levantar los servicios.
-- Para VPS usa `docker-compose.prod.yml`, no el compose local.
-- El stack de produccion no publica puertos; `frontend` y `backend` quedan accesibles solo en la red Docker `infra` para que Caddy los exponga.
-- `nginx` dentro del contenedor de frontend hace proxy de `/api` y `/auth` hacia Django.
-- El backend en produccion corre con `gunicorn` y se conecta al PostgreSQL que ya tengas levantado fuera de este stack.
-- Flujo recomendado en el VPS:
+- VPS: `198.244.150.237`
+- Usuario SSH: `ubuntu`
+- Authentik publico: `https://auth.diebyte.dev/`
 
-```bash
-cp .env.production .env
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec backend python manage.py migrate
-docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
-```
+## Arquitectura esperada
 
-- La URL publica final la servira Caddy; este stack ya no expone puertos directamente.
-
-## Servicios Docker
-
-- `postgres`: base de datos PostgreSQL local.
-- `backend`: Django en `http://localhost:8000`.
-- `frontend`: Angular dev server en `http://localhost:4200`.
-- El backend usa `postgres` como hostname interno dentro de Docker.
-- El frontend genera su config publica desde `.env` al arrancar.
+- Este proyecto ya no levanta PostgreSQL ni Authentik en local.
+- `backend` debe conectarse a la base de datos remota usando `DATABASE_URL` o `POSTGRES_*`.
+- `frontend` debe apuntar al backend real mediante `FRONTEND_PUBLIC_API_BASE_URL`.
+- Si activas OIDC, tanto backend como frontend deben usar las URLs publicas reales de Authentik.
+- `frontend/public/app-config.json` se genera desde `.env` en cada arranque o build del frontend.
+- Si la base de datos solo acepta acceso por SSH, primero debes abrir un tunel al VPS por el puerto `22`.
 
 ## Backend
 
 - El backend ya no usa SQLite como fallback.
 - Debe recibir PostgreSQL mediante `DATABASE_URL` o las variables `POSTGRES_*`.
 - El archivo `.env` se carga al iniciar `manage.py`, `wsgi.py` y `asgi.py`.
-- Para checks manuales fuera de Docker puedes usar `pip install -r backend/requirements.txt` y luego `python manage.py check` desde `backend`.
+- Para checks manuales puedes usar `pip install -r backend/requirements.txt` y luego `python manage.py check` desde `backend`.
+- Ejemplo de tunel SSH para PostgreSQL: `ssh -N -L 5432:127.0.0.1:5432 ubuntu@198.244.150.237`
 
 ## Frontend
 
 - La configuracion publica se genera en `frontend/public/app-config.json` a partir de `.env`.
 - `npm run start` y `npm run build` regeneran ese archivo automaticamente.
 - Las variables publicas usan el prefijo `FRONTEND_PUBLIC_`.
-- Dentro de Docker el frontend expone el dev server en `0.0.0.0:4200`.
+- En local, el dev server suele quedar en `http://localhost:4200`.
 
 ## Authentik
 
 - Se deja preparada la estructura de variables para OIDC con Authentik.
-- La integracion funcional todavia requiere decidir el flujo final de autenticacion.
-- Hasta entonces, `AUTHENTIK_ENABLED=false` y `FRONTEND_PUBLIC_AUTH_ENABLED=false` mantienen el comportamiento actual.
+- Si no quieres usar login OIDC todavia, deja `AUTHENTIK_ENABLED=false` y `FRONTEND_PUBLIC_AUTH_ENABLED=false`.
+- Si lo activas, usa siempre las URLs publicas reales del servicio desplegado, no `localhost`.
+- Para este entorno, el issuer esperado seria `https://auth.diebyte.dev/application/o/planning-app/`.
