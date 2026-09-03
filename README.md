@@ -37,6 +37,7 @@ Datos conocidos del despliegue actual:
 - `npm run start` y `npm run build` regeneran ese archivo automaticamente.
 - Las variables publicas usan el prefijo `FRONTEND_PUBLIC_`.
 - En local, el dev server suele quedar en `http://localhost:4200`.
+- `ng serve` usa `frontend/proxy.conf.json` para reenviar `/api` y `/admin` a `http://127.0.0.1:8000` durante desarrollo.
 
 ## Authentik
 
