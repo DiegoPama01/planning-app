@@ -71,7 +71,8 @@ El frontend se levanta desde `frontend` con `npm start`. No se inicia ningun Pos
 ## Produccion con Docker
 
 El despliegue productivo usa Gunicorn para el backend y Nginx para servir el frontend y
-reenviar `/api/` y `/auth/` al backend. El proxy inverso del VPS debe estar conectado a
+reenviar `/api/` y `/admin/` al backend. El callback `/auth/callback` lo gestiona Angular.
+El proxy inverso del VPS debe estar conectado a
 la red Docker externa `infra`.
 
 Desde la raiz del proyecto, con el `.env` de produccion configurado:
