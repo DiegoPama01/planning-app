@@ -1,15 +1,25 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { catchError, finalize, firstValueFrom, map, Observable, shareReplay, tap, throwError } from 'rxjs';
+
 import { API_BASE_URL } from '../api/api.config';
+import { RuntimeConfigService } from '../config/runtime-config.service';
+import { AuthContextService } from './auth-context.service';
 import {
   CompanyMembership,
   LoginRequest,
+  OidcCodeExchangeRequest,
+  SignupRequest,
   TokenRefreshResponse,
   TokenResponse,
   User,
 } from './auth.model';
-import { AuthContextService } from './auth-context.service';
+
+type PendingOidcLogin = {
+  state: string;
+  codeVerifier: string;
+  redirectUri: string;
+};
 
 @Injectable({
   providedIn: 'root',
@@ -17,32 +27,36 @@ import { AuthContextService } from './auth-context.service';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = inject(API_BASE_URL);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
   private readonly authContext = inject(AuthContextService);
+  private readonly pendingOidcLoginStorageKey = 'planning_app.pending_oidc_login';
   private refreshRequest$: Observable<string> | null = null;
 
   currentUser = this.authContext.currentUser;
   activeCompany = this.authContext.activeCompany;
 
-  login(credentials: LoginRequest) {
-    return this.http
-      .post<TokenResponse>(`${this.apiUrl}/auth/token/`, credentials)
-      .pipe(
-        tap((tokens) => {
-          localStorage.setItem('access_token', tokens.access);
-          localStorage.setItem('refresh_token', tokens.refresh);
-        }),
-      );
+  login(_credentials: LoginRequest): Observable<never> {
+    return new Observable((subscriber) => {
+      void this.startOidcLogin();
+      subscriber.complete();
+    });
+  }
+
+  signup(payload: SignupRequest) {
+    return this.http.post<TokenResponse>(`${this.apiUrl}/auth/signup/`, payload).pipe(
+      tap((tokens) => {
+        this.storeTokens(tokens);
+      }),
+    );
   }
 
   loadCurrentUser() {
-    return this.http
-      .get<User>(`${this.apiUrl}/auth/me/`)
-      .pipe(
-        tap((user) => {
-          const activeCompany = this.resolveActiveCompany(user, this.activeCompany());
-          this.authContext.setSession(user, activeCompany);
-        }),
-      );
+    return this.http.get<User>(`${this.apiUrl}/auth/me/`).pipe(
+      tap((user) => {
+        const activeCompany = this.resolveActiveCompany(user, this.activeCompany());
+        this.authContext.setSession(user, activeCompany);
+      }),
+    );
   }
 
   logout() {
@@ -58,6 +72,50 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return localStorage.getItem('refresh_token');
+  }
+
+  async startOidcLogin(loginHint?: string): Promise<void> {
+    const pendingLogin = await this.createPendingOidcLogin();
+    sessionStorage.setItem(this.pendingOidcLoginStorageKey, JSON.stringify(pendingLogin));
+    window.location.href = await this.buildAuthorizeUrl(pendingLogin, loginHint);
+  }
+
+  exchangeOidcCode(payload: OidcCodeExchangeRequest) {
+    return this.http.post<TokenResponse>(`${this.apiUrl}/auth/oidc/exchange/`, payload).pipe(
+      tap((tokens) => {
+        this.storeTokens(tokens);
+        sessionStorage.removeItem(this.pendingOidcLoginStorageKey);
+      }),
+    );
+  }
+
+  consumePendingOidcLogin(expectedState: string): PendingOidcLogin | null {
+    const rawValue = sessionStorage.getItem(this.pendingOidcLoginStorageKey);
+    if (!rawValue) {
+      return null;
+    }
+
+    try {
+      const parsedValue = JSON.parse(rawValue) as Partial<PendingOidcLogin>;
+      if (
+        typeof parsedValue.state !== 'string' ||
+        typeof parsedValue.codeVerifier !== 'string' ||
+        typeof parsedValue.redirectUri !== 'string' ||
+        parsedValue.state !== expectedState
+      ) {
+        sessionStorage.removeItem(this.pendingOidcLoginStorageKey);
+        return null;
+      }
+
+      return {
+        state: parsedValue.state,
+        codeVerifier: parsedValue.codeVerifier,
+        redirectUri: parsedValue.redirectUri,
+      };
+    } catch {
+      sessionStorage.removeItem(this.pendingOidcLoginStorageKey);
+      return null;
+    }
   }
 
   isAuthenticated(): boolean {
@@ -99,7 +157,7 @@ export class AuthService {
     }
 
     this.refreshRequest$ = this.http
-      .post<TokenRefreshResponse>(`${this.apiUrl}/auth/token/refresh/`, {
+      .post<TokenRefreshResponse>(`${this.apiUrl}/auth/oidc/refresh/`, {
         refresh: refreshToken,
       })
       .pipe(
@@ -120,18 +178,78 @@ export class AuthService {
     return this.refreshRequest$;
   }
 
-  private resolveActiveCompany(
-    user: User,
-    currentCompany: CompanyMembership | null,
-  ): CompanyMembership | null {
+  private resolveActiveCompany(user: User, currentCompany: CompanyMembership | null): CompanyMembership | null {
     if (!currentCompany) {
       return user.companies[0] ?? null;
     }
 
-    return (
-      user.companies.find((company) => company.id === currentCompany.id) ??
-      user.companies[0] ??
-      null
-    );
+    return user.companies.find((company) => company.id === currentCompany.id) ?? user.companies[0] ?? null;
+  }
+
+  private storeTokens(tokens: TokenResponse): void {
+    if (tokens.access) {
+      localStorage.setItem('access_token', tokens.access);
+    }
+
+    if (tokens.refresh) {
+      localStorage.setItem('refresh_token', tokens.refresh);
+      return;
+    }
+
+    localStorage.removeItem('refresh_token');
+  }
+
+  private async createPendingOidcLogin(): Promise<PendingOidcLogin> {
+    const state = this.createRandomString(32);
+    const codeVerifier = this.createRandomString(64);
+    const redirectUri = this.runtimeConfig.getConfig().auth.redirectUri;
+
+    return {
+      state,
+      codeVerifier,
+      redirectUri,
+    };
+  }
+
+  private async buildAuthorizeUrl(pendingLogin: PendingOidcLogin, loginHint?: string): Promise<string> {
+    const { auth } = this.runtimeConfig.getConfig();
+    const authorizeUrl = new URL('/application/o/authorize/', this.getAuthentikOrigin());
+    authorizeUrl.searchParams.set('client_id', auth.clientId);
+    authorizeUrl.searchParams.set('redirect_uri', pendingLogin.redirectUri);
+    authorizeUrl.searchParams.set('response_type', auth.responseType);
+    authorizeUrl.searchParams.set('scope', auth.scopes);
+    authorizeUrl.searchParams.set('state', pendingLogin.state);
+    authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+    authorizeUrl.searchParams.set('code_challenge', await this.createCodeChallenge(pendingLogin.codeVerifier));
+    if (loginHint) {
+      authorizeUrl.searchParams.set('login_hint', loginHint);
+    }
+    return authorizeUrl.toString();
+  }
+
+  private getAuthentikOrigin(): string {
+    const issuerUrl = this.runtimeConfig.getConfig().auth.issuerUrl;
+    if (!issuerUrl) {
+      throw new Error('Missing Authentik issuer URL.');
+    }
+
+    const parsedUrl = new URL(issuerUrl);
+    return `${parsedUrl.protocol}//${parsedUrl.host}`;
+  }
+
+  private async createCodeChallenge(codeVerifier: string): Promise<string> {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
+    return this.encodeBase64Url(new Uint8Array(digest));
+  }
+
+  private createRandomString(length: number): string {
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    return this.encodeBase64Url(bytes);
+  }
+
+  private encodeBase64Url(bytes: Uint8Array): string {
+    const value = btoa(String.fromCharCode(...bytes));
+    return value.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 }

@@ -1,0 +1,75 @@
+<hlm-card>
+  <hlm-card-header>
+    <h3 hlmCardTitle>Create an account</h3>
+    <p hlmCardDescription>Enter your information below to create your account.</p>
+  </hlm-card-header>
+  <div hlmCardContent>
+    <form [formRoot]="form">
+      <hlm-field-group>
+        <hlm-field>
+          <label hlmFieldLabel for="name">Full name</label>
+          <input hlmInput type="text" id="name" placeholder="John Doe" autocomplete="name" [formField]="form.name" />
+          @for (error of form.name().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+        <hlm-field>
+          <label hlmFieldLabel for="email">Email</label>
+          <input
+            hlmInput
+            type="email"
+            id="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            [formField]="form.email"
+          />
+          @if (!(form.email().touched() && form.email().invalid())) {
+            <hlm-field-description>This email will be used for both your app account and Authentik access.</hlm-field-description>
+          }
+          @for (error of form.email().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+        <hlm-field>
+          <label hlmFieldLabel for="password">Password</label>
+          <input hlmInput type="password" id="password" autocomplete="new-password" [formField]="form.password" />
+          @if (!(form.password().touched() && form.password().invalid())) {
+            <hlm-field-description>Must be at least 8 characters long.</hlm-field-description>
+          }
+          @for (error of form.password().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+        <hlm-field>
+          <label hlmFieldLabel for="confirmPassword">Confirm password</label>
+          <input
+            hlmInput
+            type="password"
+            id="confirmPassword"
+            autocomplete="new-password"
+            [formField]="form.confirmPassword"
+          />
+          @if (!(form.confirmPassword().touched() && form.confirmPassword().invalid())) {
+            <hlm-field-description>Please confirm your password.</hlm-field-description>
+          }
+          @for (error of form.confirmPassword().errors(); track error) {
+            <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
+          }
+        </hlm-field>
+        <hlm-field>
+          @if (signupError(); as errorMessage) {
+            <p class="text-sm font-medium text-red-600" aria-live="polite">{{ errorMessage }}</p>
+          }
+          @if (signupSucceeded()) {
+            <p class="text-sm font-medium text-green-700" aria-live="polite">Account created successfully.</p>
+          }
+          <button hlmBtn type="submit" [disabled]="isBusy()">Create account</button>
+          <p hlmFieldDescription class="text-center">
+            Already have an account?
+            <a routerLink="/login">Sign in</a>
+          </p>
+        </hlm-field>
+      </hlm-field-group>
+    </form>
+  </div>
+</hlm-card>

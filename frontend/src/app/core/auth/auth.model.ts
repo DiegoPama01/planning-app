@@ -15,8 +15,13 @@ export interface User {
 }
 
 export interface TokenResponse {
-  access: string;
-  refresh: string;
+  access?: string;
+  refresh?: string;
+  expires_in?: number | null;
+  token_type?: string;
+  account_created?: boolean;
+  login_succeeded?: boolean;
+  login_error?: string | null;
 }
 
 export interface TokenRefreshResponse {
@@ -27,3 +32,18 @@ export interface LoginRequest {
   email: string;
   password: string;
 }
+
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  confirm_password: string;
+}
+
+export interface OidcCodeExchangeRequest {
+  code: string;
+  code_verifier: string;
+  redirect_uri: string;
+}
+
+export type AuthSessionProvider = 'local' | 'authentik';

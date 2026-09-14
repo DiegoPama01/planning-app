@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import LoginPage from './features/auth/login/login.component';
+import OidcCallbackPage from './features/auth/oidc-callback/oidc-callback.component';
+import SignupPage from './features/auth/signup/signup.component';
 import { MainLayoutComponent } from './layout/main-layout.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
@@ -8,6 +10,15 @@ export const routes: Routes = [
     path: 'login',
     component: LoginPage,
     canActivate: [guestGuard],
+  },
+  {
+    path: 'signup',
+    component: SignupPage,
+    canActivate: [guestGuard],
+  },
+  {
+    path: 'auth/callback',
+    component: OidcCallbackPage,
   },
   {
     path: '',

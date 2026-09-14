@@ -123,6 +123,7 @@ MAILERS = {
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "accounts.authentication.AuthentikUserInfoAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
@@ -151,6 +152,9 @@ AUTHENTIK = {
     "EMAIL_CLAIM": get_env("AUTHENTIK_EMAIL_CLAIM", "email"),
     "USERNAME_CLAIM": get_env("AUTHENTIK_USERNAME_CLAIM", "preferred_username"),
     "VERIFY_SSL": get_bool("AUTHENTIK_VERIFY_SSL", default=True),
+    "SERVICE_TOKEN": get_env("AUTHENTIK_SERVICE_TOKEN", ""),
+    "DEFAULT_GROUPS": get_list("AUTHENTIK_DEFAULT_GROUPS", []),
+    "DEFAULT_GROUP_IDS": get_list("AUTHENTIK_DEFAULT_GROUP_IDS", []),
 }
 
 if AUTHENTIK["ENABLED"]:
