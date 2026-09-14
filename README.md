@@ -67,3 +67,27 @@ El frontend se levanta desde `frontend` con `npm start`. No se inicia ningun Pos
 - Si el alta de usuarios la gestiona Django contra la API de Authentik, configura `AUTHENTIK_SERVICE_TOKEN` en el backend.
 - Si el acceso a la app `cuadrant` depende de grupos/entitlements, configura `AUTHENTIK_DEFAULT_GROUPS` para meter a cada usuario nuevo en los grupos autorizados.
 - Si el token de servicio no puede listar grupos, usa `AUTHENTIK_DEFAULT_GROUP_IDS` con el UUID del grupo en vez del nombre.
+
+## Produccion con Docker
+
+El despliegue productivo usa Gunicorn para el backend y Nginx para servir el frontend y
+reenviar `/api/` y `/auth/` al backend. El proxy inverso del VPS debe estar conectado a
+la red Docker externa `infra`.
+
+Desde la raiz del proyecto, con el `.env` de produccion configurado:
+
+```bash
+docker network inspect infra >/dev/null 2>&1 || docker network create infra
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm backend python manage.py migrate
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Para aplicar cambios posteriores de codigo o variables de entorno:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+```
+
+No uses `docker compose down -v` en produccion. La base de datos es externa al compose,
+pero debe hacerse un backup antes de ejecutar migraciones.
