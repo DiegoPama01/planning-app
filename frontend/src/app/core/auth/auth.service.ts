@@ -1,6 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, finalize, firstValueFrom, map, Observable, shareReplay, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  firstValueFrom,
+  map,
+  Observable,
+  shareReplay,
+  tap,
+  throwError,
+} from 'rxjs';
 
 import { API_BASE_URL } from '../api/api.config';
 import { RuntimeConfigService } from '../config/runtime-config.service';
@@ -161,10 +170,14 @@ export class AuthService {
         refresh: refreshToken,
       })
       .pipe(
-        map((response) => response.access),
-        tap((accessToken) => {
-          localStorage.setItem('access_token', accessToken);
+        tap((response) => {
+          if (!response.access) {
+            throw new Error('Refresh response did not contain an access token.');
+          }
+
+          this.storeTokens(response, true);
         }),
+        map((response) => response.access),
         catchError((error) => {
           this.logout();
           return throwError(() => error);
@@ -186,7 +199,7 @@ export class AuthService {
     return user.companies.find((company) => company.id === currentCompany.id) ?? user.companies[0] ?? null;
   }
 
-  private storeTokens(tokens: TokenResponse): void {
+  private storeTokens(tokens: TokenResponse, preserveRefreshToken = false): void {
     if (tokens.access) {
       localStorage.setItem('access_token', tokens.access);
     }
@@ -196,7 +209,9 @@ export class AuthService {
       return;
     }
 
-    localStorage.removeItem('refresh_token');
+    if (!preserveRefreshToken) {
+      localStorage.removeItem('refresh_token');
+    }
   }
 
   private async createPendingOidcLogin(): Promise<PendingOidcLogin> {

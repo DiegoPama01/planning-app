@@ -26,6 +26,9 @@ export interface TokenResponse {
 
 export interface TokenRefreshResponse {
   access: string;
+  refresh?: string;
+  expires_in?: number | null;
+  token_type?: string;
 }
 
 export interface LoginRequest {
