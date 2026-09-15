@@ -147,7 +147,7 @@ AUTHENTIK = {
     "CLIENT_ID": get_env("AUTHENTIK_CLIENT_ID", ""),
     "CLIENT_SECRET": get_env("AUTHENTIK_CLIENT_SECRET", ""),
     "AUDIENCE": get_env("AUTHENTIK_AUDIENCE", ""),
-    "SCOPES": get_env("AUTHENTIK_SCOPES", "openid profile email"),
+    "SCOPES": get_env("AUTHENTIK_SCOPES", "openid profile email offline_access"),
     "SUB_CLAIM": get_env("AUTHENTIK_SUB_CLAIM", "sub"),
     "EMAIL_CLAIM": get_env("AUTHENTIK_EMAIL_CLAIM", "email"),
     "USERNAME_CLAIM": get_env("AUTHENTIK_USERNAME_CLAIM", "preferred_username"),

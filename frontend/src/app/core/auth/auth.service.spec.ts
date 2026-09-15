@@ -32,7 +32,7 @@ describe('AuthService refresh', () => {
     });
 
     const request = http.expectOne('/api/auth/oidc/refresh/');
-    expect(request.request.body).toEqual({ refresh: 'old-refresh' });
+    expect(request.request.body).toEqual({ refresh_token: 'old-refresh' });
     request.flush({
       access: 'new-access',
       refresh: 'new-refresh',
@@ -67,5 +67,24 @@ describe('AuthService refresh', () => {
     requests[0].flush({ access: 'new-access', refresh: 'new-refresh' });
 
     expect(receivedTokens).toEqual(['new-access', 'new-access']);
+  });
+
+  it('clears the session when the refresh token is rejected', () => {
+    localStorage.setItem('access_token', 'expired-access');
+    localStorage.setItem('refresh_token', 'invalid-refresh');
+
+    let refreshError: unknown;
+    authService.refreshAccessToken().subscribe({
+      error: (error) => {
+        refreshError = error;
+      },
+    });
+
+    const request = http.expectOne('/api/auth/oidc/refresh/');
+    request.flush({ refresh_token: ['Invalid or expired refresh token.'] }, { status: 400, statusText: 'Bad Request' });
+
+    expect(refreshError).toBeTruthy();
+    expect(localStorage.getItem('access_token')).toBeNull();
+    expect(localStorage.getItem('refresh_token')).toBeNull();
   });
 });

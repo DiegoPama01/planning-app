@@ -167,7 +167,7 @@ export class AuthService {
 
     this.refreshRequest$ = this.http
       .post<TokenRefreshResponse>(`${this.apiUrl}/auth/oidc/refresh/`, {
-        refresh: refreshToken,
+        refresh_token: refreshToken,
       })
       .pipe(
         tap((response) => {

@@ -16,6 +16,9 @@ from .models import User
 class AuthentikUserInfoAuthentication(authentication.BaseAuthentication):
     keyword = "Bearer"
 
+    def authenticate_header(self, request):
+        return self.keyword
+
     def authenticate(self, request):
         header = authentication.get_authorization_header(request).decode("utf-8")
         if not header:
