@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -9,7 +10,13 @@ import {
 } from '@angular/core';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronLeft, lucideChevronRight, lucideFilter } from '@ng-icons/lucide';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideDownload,
+  lucideFilter,
+  lucideRefreshCw,
+} from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmButtonGroupImports } from '@spartan-ng/helm/button-group';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -29,6 +36,7 @@ import {
   PlanningWeekWritePayload,
 } from './planning.model';
 import { PlanningService } from './planning.service';
+import { buildPlanningCsv, type PlanningExportRow } from './planning-export';
 
 interface PlanningDayColumn {
   key: string;
@@ -71,7 +79,7 @@ interface CellEditorState {
 @Component({
   selector: 'app-planning',
   imports: [NgIcon, HlmButtonImports, HlmButtonGroupImports, HlmCardImports, HlmDatePickerImports, HlmDropdownMenuImports, HlmInputImports, HlmPopoverImports, HlmSelectImports, HlmTableImports],
-  providers: [provideIcons({ lucideChevronLeft, lucideChevronRight, lucideFilter })],
+  providers: [provideIcons({ lucideChevronLeft, lucideChevronRight, lucideDownload, lucideFilter, lucideRefreshCw })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planning.component.html',
 })
@@ -81,6 +89,7 @@ export class PlanningComponent {
   private readonly zonesService = inject(ZonesService);
   private readonly shiftsService = inject(ShiftsService);
   private readonly planningService = inject(PlanningService);
+  private readonly document = inject(DOCUMENT);
   protected readonly selectedDate = signal(this.formatDateForInput(new Date()));
   protected readonly assignments = signal<Record<string, AssignmentCellState>>({});
   protected readonly openPopoverKey = signal<string | null>(null);
@@ -88,6 +97,9 @@ export class PlanningComponent {
   protected readonly saveError = signal<string | null>(null);
   protected readonly saveSuccess = signal<string | null>(null);
   protected readonly isSaving = signal(false);
+  protected readonly isExporting = signal(false);
+  protected readonly exportError = signal<string | null>(null);
+  protected readonly exportSuccess = signal<string | null>(null);
   protected readonly colorMode = signal<PlanningColorMode>('zone');
   protected readonly selectedPositionId = signal<string | null>(null);
   protected readonly selectedZoneId = signal<string | null>(null);
@@ -490,6 +502,56 @@ export class PlanningComponent {
 
   protected async saveWeek(): Promise<void> {
     await this.persistCurrentWeek();
+  }
+
+  protected exportPlanning(): void {
+    if (this.planningRows().length === 0 || this.isExporting()) {
+      return;
+    }
+
+    this.isExporting.set(true);
+    this.exportError.set(null);
+    this.exportSuccess.set(null);
+
+    try {
+      const rows: PlanningExportRow[] = this.planningRows().map((employee) => ({
+        employee: employee.fullName,
+        position: employee.positionName,
+        cells: this.planningDays().map((day) => {
+          const assignment = this.getAssignment(employee.id, day.isoDate);
+          const zone = employee.zones.find((item) => item.id === assignment.zoneId);
+          const shift = employee.shifts.find((item) => item.id === assignment.shiftId);
+
+          return {
+            date: day.isoDate,
+            day: day.label,
+            zone: zone?.name ?? '',
+            shift: shift?.name ?? '',
+            startTime: shift?.startTime ?? '',
+            endTime: shift?.endTime ?? '',
+            note: assignment.note,
+          };
+        }),
+      }));
+
+      const blob = new Blob([`\ufeff${buildPlanningCsv(rows)}`], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = this.document.createElement('a');
+      link.href = url;
+      link.download = `planning-${this.weekStartIso()}.csv`;
+      this.document.body?.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      this.exportSuccess.set(`Planning exported for ${this.weekRangeLabel()}.`);
+      toast.success('Planning exported successfully.');
+    } catch {
+      this.exportError.set('We could not export planning right now. Please try again.');
+      toast.error('We could not export planning.');
+    } finally {
+      this.isExporting.set(false);
+    }
   }
 
   private async persistCurrentWeek(): Promise<void> {
