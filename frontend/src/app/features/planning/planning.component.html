@@ -10,7 +10,15 @@
       </div>
     </div>
 
-    <button hlmBtn type="button" variant="outline" (click)="reload()">Refresh data</button>
+  </div>
+
+  <div class="sr-only" aria-live="polite" aria-atomic="true">
+    @if (exportSuccess(); as message) {
+      {{ message }}
+    }
+    @if (exportError(); as message) {
+      {{ message }}
+    }
   </div>
 
   <div class="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
@@ -30,7 +38,7 @@
       </button>
     </div>
 
-    <div class="flex items-center justify-end gap-3 lg:justify-self-end">
+    <div class="flex flex-wrap items-center justify-end gap-3 lg:justify-self-end">
       <div hlmButtonGroup aria-label="Planning color mode">
         <button hlmBtn type="button" [variant]="colorMode() === 'zone' ? 'default' : 'outline'" (click)="updateColorMode('zone')">
           Zones
@@ -53,6 +61,34 @@
           @if (hasActiveFilters()) {
             <span class="bg-primary absolute top-2 right-2 h-2 w-2 rounded-full"></span>
           }
+      </button>
+
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        size="icon"
+        class="size-10 p-0"
+        [attr.aria-label]="isExporting() ? 'Exporting week' : 'Export week'"
+        [attr.title]="isExporting() ? 'Exporting week' : 'Export week'"
+        [attr.aria-busy]="isExporting()"
+        [disabled]="isExporting() || planningResource.isLoading() || planningWeekResource.isLoading() || planningRows().length === 0"
+        (click)="exportPlanning()"
+      >
+        <ng-icon name="lucideDownload" class="text-base" />
+      </button>
+
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        size="icon"
+        class="size-10 p-0"
+        aria-label="Refresh planning data"
+        title="Refresh planning data"
+        (click)="reload()"
+      >
+        <ng-icon name="lucideRefreshCw" class="text-base" />
       </button>
 
       <ng-template #planningFiltersMenu>
