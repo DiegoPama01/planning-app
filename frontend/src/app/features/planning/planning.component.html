@@ -221,10 +221,126 @@
             <th hlmTableHead class="sticky left-0 z-10 min-w-56 border-b-0 bg-card">Employee</th>
             @for (day of planningDays(); track day.isoDate) {
               <th hlmTableHead class="min-w-40 border-b-0 text-center">
-                <div class="flex flex-col items-center gap-0.5">
-                  <span>{{ day.label }}</span>
-                  <span class="text-muted-foreground text-xs font-normal">{{ day.dateLabel }}</span>
-                </div>
+                <hlm-dialog>
+                  <button
+                    hlmDialogTrigger
+                    hlmBtn
+                    type="button"
+                    variant="ghost"
+                    class="h-auto w-full flex-col gap-0.5 rounded-md px-2 py-1.5"
+                    [attr.aria-label]="'View staffing summary for ' + day.label + ' ' + day.dateLabel"
+                    (click)="resetSummaryFilters()"
+                  >
+                    <span>{{ day.label }}</span>
+                    <span class="text-muted-foreground text-xs font-normal">{{ day.dateLabel }}</span>
+                  </button>
+
+                  <hlm-dialog-content *hlmDialogPortal="let ctx" class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                    @let summary = getDaySummary(day.isoDate);
+                    <hlm-dialog-header>
+                      <h2 hlmDialogTitle>Staffing for {{ day.label }} {{ day.dateLabel }}</h2>
+                      <p hlmDialogDescription>
+                        {{ summary.assigned }} of {{ planningRows().length }} employees assigned. Use the counts to spot zones with low coverage.
+                      </p>
+                    </hlm-dialog-header>
+
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      <label class="grid gap-1.5 text-sm font-medium">
+                        <span>Zone</span>
+                        <hlm-select
+                          [value]="summaryZoneFilter()"
+                          [itemToString]="summaryZoneToLabel(day.isoDate)"
+                          (valueChange)="summaryZoneFilter.set($event ?? null)"
+                        >
+                          <hlm-select-trigger class="w-full">
+                            <hlm-select-value placeholder="All zones" />
+                          </hlm-select-trigger>
+                          <hlm-select-content *hlmSelectPortal>
+                            <hlm-select-group>
+                              @for (option of getSummaryFilterOptions(day.isoDate, 'zone'); track option.id) {
+                                <hlm-select-item [value]="option.id">{{ option.label }}</hlm-select-item>
+                              }
+                            </hlm-select-group>
+                          </hlm-select-content>
+                        </hlm-select>
+                      </label>
+
+                      <label class="grid gap-1.5 text-sm font-medium">
+                        <span>Position</span>
+                        <hlm-select
+                          [value]="summaryPositionFilter()"
+                          [itemToString]="summaryPositionToLabel(day.isoDate)"
+                          (valueChange)="summaryPositionFilter.set($event ?? null)"
+                        >
+                          <hlm-select-trigger class="w-full">
+                            <hlm-select-value placeholder="All positions" />
+                          </hlm-select-trigger>
+                          <hlm-select-content *hlmSelectPortal>
+                            <hlm-select-group>
+                              @for (option of getSummaryFilterOptions(day.isoDate, 'position'); track option.id) {
+                                <hlm-select-item [value]="option.id">{{ option.label }}</hlm-select-item>
+                              }
+                            </hlm-select-group>
+                          </hlm-select-content>
+                        </hlm-select>
+                      </label>
+
+                      <label class="grid gap-1.5 text-sm font-medium">
+                        <span>Shift</span>
+                        <hlm-select
+                          [value]="summaryShiftFilter()"
+                          [itemToString]="summaryShiftToLabel(day.isoDate)"
+                          (valueChange)="summaryShiftFilter.set($event ?? null)"
+                        >
+                          <hlm-select-trigger class="w-full">
+                            <hlm-select-value placeholder="All shifts" />
+                          </hlm-select-trigger>
+                          <hlm-select-content *hlmSelectPortal>
+                            <hlm-select-group>
+                              @for (option of getSummaryFilterOptions(day.isoDate, 'shift'); track option.id) {
+                                <hlm-select-item [value]="option.id">{{ option.label }}</hlm-select-item>
+                              }
+                            </hlm-select-group>
+                          </hlm-select-content>
+                        </hlm-select>
+                      </label>
+                    </div>
+
+                    <div class="overflow-hidden rounded-lg border">
+                      <table hlmTable>
+                        <thead hlmTableHeader>
+                          <tr hlmTableRow>
+                            <th hlmTableHead>Zone</th>
+                            <th hlmTableHead>Position</th>
+                            <th hlmTableHead>Shift</th>
+                            <th hlmTableHead class="text-right">Employees</th>
+                          </tr>
+                        </thead>
+                        <tbody hlmTableBody>
+                          @for (item of getFilteredDaySummaryRows(day.isoDate); track item.id) {
+                            <tr hlmTableRow>
+                              <td hlmTableCell>{{ item.zoneName }}</td>
+                              <td hlmTableCell>{{ item.positionName }}</td>
+                              <td hlmTableCell>{{ item.shiftName }}</td>
+                              <td hlmTableCell class="text-right font-semibold">{{ item.count }}</td>
+                            </tr>
+                          }
+                          @if (getFilteredDaySummaryRows(day.isoDate).length === 0) {
+                            <tr hlmTableRow>
+                              <td hlmTableCell colspan="4" class="text-muted-foreground py-8 text-center">
+                                No assignments match these filters.
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <hlm-dialog-footer>
+                      <button hlmBtn type="button" variant="outline" hlmDialogClose>Close</button>
+                    </hlm-dialog-footer>
+                  </hlm-dialog-content>
+                </hlm-dialog>
               </th>
             }
           </tr>

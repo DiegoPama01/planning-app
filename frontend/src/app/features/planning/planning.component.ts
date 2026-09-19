@@ -21,6 +21,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmButtonGroupImports } from '@spartan-ng/helm/button-group';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmPopoverImports } from '@spartan-ng/helm/popover';
@@ -76,9 +77,26 @@ interface CellEditorState {
   note: string;
 }
 
+interface PlanningSummaryRow {
+  id: string;
+  zoneId: string;
+  zoneName: string;
+  positionId: string;
+  positionName: string;
+  shiftId: string;
+  shiftName: string;
+  count: number;
+}
+
+interface PlanningDaySummary {
+  assigned: number;
+  unassigned: number;
+  rows: PlanningSummaryRow[];
+}
+
 @Component({
   selector: 'app-planning',
-  imports: [NgIcon, HlmButtonImports, HlmButtonGroupImports, HlmCardImports, HlmDatePickerImports, HlmDropdownMenuImports, HlmInputImports, HlmPopoverImports, HlmSelectImports, HlmTableImports],
+  imports: [NgIcon, HlmButtonImports, HlmButtonGroupImports, HlmCardImports, HlmDatePickerImports, HlmDialogImports, HlmDropdownMenuImports, HlmInputImports, HlmPopoverImports, HlmSelectImports, HlmTableImports],
   providers: [provideIcons({ lucideChevronLeft, lucideChevronRight, lucideDownload, lucideFilter, lucideRefreshCw })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planning.component.html',
@@ -104,6 +122,9 @@ export class PlanningComponent {
   protected readonly selectedPositionId = signal<string | null>(null);
   protected readonly selectedZoneId = signal<string | null>(null);
   protected readonly selectedShiftId = signal<string | null>(null);
+  protected readonly summaryZoneFilter = signal<string | null>(null);
+  protected readonly summaryPositionFilter = signal<string | null>(null);
+  protected readonly summaryShiftFilter = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -201,6 +222,17 @@ export class PlanningComponent {
         isoDate: this.formatDateForInput(date),
       };
     });
+  });
+
+  protected readonly planningDaySummaries = computed(() => {
+    const rows = this.planningRows();
+    const summaries = new Map<string, PlanningDaySummary>();
+
+    for (const day of this.planningDays()) {
+      summaries.set(day.isoDate, this.buildDaySummary(rows, day.isoDate));
+    }
+
+    return summaries;
   });
 
   protected reload(): void {
@@ -358,6 +390,62 @@ export class PlanningComponent {
       shiftId: null,
       note: '',
     };
+  }
+
+  protected getDaySummary(isoDate: string): PlanningDaySummary {
+    return this.planningDaySummaries().get(isoDate) ?? {
+      assigned: 0,
+      unassigned: 0,
+      rows: [],
+    };
+  }
+
+  protected getFilteredDaySummaryRows(isoDate: string): PlanningSummaryRow[] {
+    const zoneId = this.summaryZoneFilter();
+    const positionId = this.summaryPositionFilter();
+    const shiftId = this.summaryShiftFilter();
+
+    return this.getDaySummary(isoDate).rows.filter((row) => {
+      return (!zoneId || row.zoneId === zoneId)
+        && (!positionId || row.positionId === positionId)
+        && (!shiftId || row.shiftId === shiftId);
+    });
+  }
+
+  protected getSummaryFilterOptions(isoDate: string, type: 'zone' | 'position' | 'shift') {
+    const options = new Map<string, string>();
+
+    for (const row of this.getDaySummary(isoDate).rows) {
+      if (type === 'zone') {
+        options.set(row.zoneId, row.zoneName);
+      } else if (type === 'position') {
+        options.set(row.positionId, row.positionName);
+      } else {
+        options.set(row.shiftId, row.shiftName);
+      }
+    }
+
+    return Array.from(options.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }
+
+  protected readonly summaryZoneToLabel = (isoDate: string) => (value: string | null | undefined) => {
+    return this.getSummaryFilterOptions(isoDate, 'zone').find((option) => option.id === value)?.label ?? '';
+  };
+
+  protected readonly summaryPositionToLabel = (isoDate: string) => (value: string | null | undefined) => {
+    return this.getSummaryFilterOptions(isoDate, 'position').find((option) => option.id === value)?.label ?? '';
+  };
+
+  protected readonly summaryShiftToLabel = (isoDate: string) => (value: string | null | undefined) => {
+    return this.getSummaryFilterOptions(isoDate, 'shift').find((option) => option.id === value)?.label ?? '';
+  };
+
+  protected resetSummaryFilters(): void {
+    this.summaryZoneFilter.set(null);
+    this.summaryPositionFilter.set(null);
+    this.summaryShiftFilter.set(null);
   }
 
   protected updateZone(employeeId: string, isoDate: string, zoneId: string | null): void {
@@ -704,5 +792,52 @@ export class PlanningComponent {
           note: value.note.trim(),
         };
       });
+  }
+
+  private buildDaySummary(rows: PlanningEmployeeRow[], isoDate: string): PlanningDaySummary {
+    const summaryRows = new Map<string, PlanningSummaryRow>();
+    let assigned = 0;
+
+    for (const employee of rows) {
+      const assignment = this.getAssignment(employee.id, isoDate);
+      if (!assignment.zoneId || !assignment.shiftId) {
+        continue;
+      }
+
+      const zone = employee.zones.find((item) => item.id === assignment.zoneId);
+      const shift = employee.shifts.find((item) => item.id === assignment.shiftId);
+      if (!zone || !shift) {
+        continue;
+      }
+
+      assigned += 1;
+      const rowId = `${zone.id}:${employee.positionId}:${shift.id}`;
+      const row = summaryRows.get(rowId);
+
+      if (row) {
+        row.count += 1;
+      } else {
+        summaryRows.set(rowId, {
+          id: rowId,
+          zoneId: zone.id,
+          zoneName: zone.name,
+          positionId: employee.positionId,
+          positionName: employee.positionName,
+          shiftId: shift.id,
+          shiftName: shift.name,
+          count: 1,
+        });
+      }
+    }
+
+    return {
+      assigned,
+      unassigned: rows.length - assigned,
+      rows: Array.from(summaryRows.values()).sort((left, right) => {
+        return left.zoneName.localeCompare(right.zoneName)
+          || left.positionName.localeCompare(right.positionName)
+          || left.shiftName.localeCompare(right.shiftName);
+      }),
+    };
   }
 }
