@@ -17,7 +17,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(addAuthorizationHeader(req, accessToken)).pipe(
     catchError((error: unknown) => {
-      if (!(error instanceof HttpErrorResponse) || error.status !== 401) {
+      if (!shouldRefreshToken(error, req.url)) {
         return throwError(() => error);
       }
 
@@ -39,4 +39,12 @@ function addAuthorizationHeader(req: Parameters<HttpInterceptorFn>[0], accessTok
 
 function isAuthRequest(url: string): boolean {
   return url.includes('/auth/token/') || url.includes('/auth/oidc/');
+}
+
+function shouldRefreshToken(error: unknown, url: string): error is HttpErrorResponse {
+  if (!(error instanceof HttpErrorResponse)) {
+    return false;
+  }
+
+  return error.status === 401 || (error.status === 403 && url.endsWith('/auth/me/'));
 }

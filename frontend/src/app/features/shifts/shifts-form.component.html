@@ -13,10 +13,7 @@
         <div class="grid gap-6 md:grid-cols-2">
           <hlm-field>
             <label hlmFieldLabel for="shift-start-time">Start time</label>
-            <div class="relative">
-              <input hlmInput id="shift-start-time" type="time" class="pr-10" [formField]="shiftForm.start_time" />
-              <ng-icon name="lucideClock3" class="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2" />
-            </div>
+             <input hlmInput id="shift-start-time" type="time" [formField]="shiftForm.start_time" />
             @for (error of shiftForm.start_time().errors(); track error) {
               <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
             }
@@ -24,10 +21,7 @@
 
           <hlm-field>
             <label hlmFieldLabel for="shift-end-time">End time</label>
-            <div class="relative">
-              <input hlmInput id="shift-end-time" type="time" class="pr-10" [formField]="shiftForm.end_time" />
-              <ng-icon name="lucideClock3" class="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2" />
-            </div>
+             <input hlmInput id="shift-end-time" type="time" [formField]="shiftForm.end_time" />
             @for (error of shiftForm.end_time().errors(); track error) {
               <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
             }

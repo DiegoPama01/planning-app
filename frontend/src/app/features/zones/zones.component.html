@@ -61,8 +61,7 @@
             <th hlmTableHead>Name</th>
             <th hlmTableHead>Usage</th>
             <th hlmTableHead>Color</th>
-            <th hlmTableHead>ID</th>
-            <th hlmTableHead class="text-right">Actions</th>
+             <th hlmTableHead class="text-right">Actions</th>
           </tr>
         </thead>
         <tbody hlmTableBody>
@@ -79,10 +78,7 @@
                   <span>{{ zone.color }}</span>
                 </div>
               </td>
-              <td hlmTableCell class="text-muted-foreground">
-                <span class="block max-w-44 truncate">{{ zone.id }}</span>
-              </td>
-              <td hlmTableCell class="text-right">
+               <td hlmTableCell class="text-right">
                 <div class="flex justify-end gap-2">
                   <button hlmBtn type="button" variant="outline" size="sm" [routerLink]="[zone.id, 'edit']">Edit</button>
                   <hlm-alert-dialog>

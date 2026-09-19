@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, input, signal } from '@angular/core';
 import { form, FormField, FormRoot, required } from '@angular/forms/signals';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideClock3 } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
@@ -13,13 +11,11 @@ import { ShiftUpsertPayload } from './shifts.model';
   imports: [
     FormRoot,
     FormField,
-    NgIcon,
     HlmButtonImports,
     HlmCardImports,
     HlmFieldImports,
     HlmInputImports,
   ],
-  providers: [provideIcons({ lucideClock3 })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shifts-form.component.html',
 })
