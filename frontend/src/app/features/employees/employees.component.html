@@ -63,8 +63,7 @@
             <th hlmTableHead>Position</th>
             <th hlmTableHead>Zones</th>
             <th hlmTableHead>Shifts</th>
-            <th hlmTableHead>ID</th>
-            <th hlmTableHead class="text-right">Actions</th>
+             <th hlmTableHead class="text-right">Actions</th>
           </tr>
         </thead>
         <tbody hlmTableBody>
@@ -79,10 +78,7 @@
               <td hlmTableCell class="text-muted-foreground">{{ employee.positionName }}</td>
               <td hlmTableCell class="text-muted-foreground">{{ employee.zonesSummary }}</td>
               <td hlmTableCell class="text-muted-foreground">{{ employee.shiftsSummary }}</td>
-              <td hlmTableCell class="text-muted-foreground">
-                <span class="block max-w-44 truncate">{{ employee.id }}</span>
-              </td>
-              <td hlmTableCell class="text-right">
+               <td hlmTableCell class="text-right">
                 <div class="flex justify-end gap-2">
                   <button hlmBtn type="button" variant="outline" size="sm" [routerLink]="[employee.id, 'edit']">Edit</button>
                   <hlm-alert-dialog>
