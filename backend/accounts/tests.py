@@ -11,10 +11,12 @@ from .authentik import AuthentikProvisioningError
 
 class AuthentikAuthenticationTests(SimpleTestCase):
     def test_userinfo_401_is_exposed_as_http_401(self):
-        request = Request(APIRequestFactory().get(
-            "/api/auth/me/",
-            HTTP_AUTHORIZATION="Bearer expired-access",
-        ))
+        request = Request(
+            APIRequestFactory().get(
+                "/api/auth/me/",
+                HTTP_AUTHORIZATION="Bearer expired-access",
+            )
+        )
         authenticator = AuthentikUserInfoAuthentication()
 
         with patch(
@@ -29,3 +31,24 @@ class AuthentikAuthenticationTests(SimpleTestCase):
 
         self.assertEqual(raised.exception.status_code, 401)
         self.assertEqual(authenticator.authenticate_header(request), "Bearer")
+
+    def test_userinfo_403_is_exposed_as_http_401(self):
+        request = Request(
+            APIRequestFactory().get(
+                "/api/auth/me/",
+                HTTP_AUTHORIZATION="Bearer expired-access",
+            )
+        )
+        authenticator = AuthentikUserInfoAuthentication()
+
+        with patch(
+            "accounts.authentication.get_userinfo",
+            side_effect=AuthentikProvisioningError(
+                "Authentik request failed with status 403.",
+                status_code=403,
+            ),
+        ):
+            with self.assertRaises(AuthenticationFailed) as raised:
+                authenticator.authenticate(request)
+
+        self.assertEqual(raised.exception.status_code, 401)

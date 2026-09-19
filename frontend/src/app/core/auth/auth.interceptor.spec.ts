@@ -48,4 +48,23 @@ describe('authInterceptor', () => {
     await expect(requestPromise).resolves.toEqual({ id: 1 });
     expect(localStorage.getItem('refresh_token')).toBe('rotated-refresh');
   });
+
+  it('refreshes when auth/me returns forbidden for an expired token', async () => {
+    const requestPromise = firstValueFrom(httpClient.get('/api/auth/me/'));
+
+    const initialRequest = http.expectOne('/api/auth/me/');
+    initialRequest.flush(
+      { detail: 'Authentication credentials were not provided.' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+
+    const refreshRequest = http.expectOne('/api/auth/oidc/refresh/');
+    refreshRequest.flush({ access: 'new-access' });
+
+    const retryRequest = http.expectOne('/api/auth/me/');
+    expect(retryRequest.request.headers.get('Authorization')).toBe('Bearer new-access');
+    retryRequest.flush({ id: 1 });
+
+    await expect(requestPromise).resolves.toEqual({ id: 1 });
+  });
 });
