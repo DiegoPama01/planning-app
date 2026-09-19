@@ -38,7 +38,7 @@ class AuthentikUserInfoAuthentication(authentication.BaseAuthentication):
         try:
             claims = get_userinfo(token)
         except AuthentikProvisioningError as exc:
-            if exc.status_code == 401:
+            if exc.status_code in {401, 403}:
                 raise AuthenticationFailed(str(exc)) from exc
             return None
 
