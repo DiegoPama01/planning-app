@@ -39,10 +39,16 @@ export class AuthService {
   private readonly runtimeConfig = inject(RuntimeConfigService);
   private readonly authContext = inject(AuthContextService);
   private readonly pendingOidcLoginStorageKey = 'planning_app.pending_oidc_login';
+  private readonly accessTokenExpiresAtStorageKey = 'access_token_expires_at';
   private refreshRequest$: Observable<string> | null = null;
+  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   currentUser = this.authContext.currentUser;
   activeCompany = this.authContext.activeCompany;
+
+  constructor() {
+    this.scheduleStoredTokenRefresh();
+  }
 
   login(_credentials: LoginRequest): Observable<never> {
     return new Observable((subscriber) => {
@@ -71,6 +77,8 @@ export class AuthService {
   logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem(this.accessTokenExpiresAtStorageKey);
+    this.clearRefreshTimer();
     this.refreshRequest$ = null;
     this.authContext.clear();
   }
@@ -202,6 +210,7 @@ export class AuthService {
   private storeTokens(tokens: TokenResponse, preserveRefreshToken = false): void {
     if (tokens.access) {
       localStorage.setItem('access_token', tokens.access);
+      this.scheduleTokenRefresh(tokens.access, tokens.expires_in);
     }
 
     if (tokens.refresh) {
@@ -211,6 +220,71 @@ export class AuthService {
 
     if (!preserveRefreshToken) {
       localStorage.removeItem('refresh_token');
+    }
+  }
+
+  private scheduleStoredTokenRefresh(): void {
+    const accessToken = this.getAccessToken();
+    if (!accessToken) {
+      return;
+    }
+
+    const storedExpiration = Number(localStorage.getItem(this.accessTokenExpiresAtStorageKey));
+    if (Number.isFinite(storedExpiration) && storedExpiration > 0) {
+      this.scheduleRefreshAt(storedExpiration);
+      return;
+    }
+
+    this.scheduleTokenRefresh(accessToken, null);
+  }
+
+  private scheduleTokenRefresh(accessToken: string, expiresIn: number | null | undefined): void {
+    const tokenExpiration = this.readTokenExpiration(accessToken);
+    const expiresAt = tokenExpiration ?? (
+      typeof expiresIn === 'number' && expiresIn > 0 ? Date.now() + expiresIn * 1000 : null
+    );
+
+    if (!expiresAt) {
+      return;
+    }
+
+    localStorage.setItem(this.accessTokenExpiresAtStorageKey, String(expiresAt));
+    this.scheduleRefreshAt(expiresAt);
+  }
+
+  private scheduleRefreshAt(expiresAt: number): void {
+    this.clearRefreshTimer();
+
+    const refreshDelay = Math.max(expiresAt - Date.now() - 30_000, 1_000);
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      if (this.getRefreshToken()) {
+        this.refreshAccessToken().subscribe({ error: () => undefined });
+      }
+    }, refreshDelay);
+  }
+
+  private clearRefreshTimer(): void {
+    if (this.refreshTimer !== null) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+  }
+
+  private readTokenExpiration(token: string): number | null {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    try {
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))) as {
+        exp?: unknown;
+      };
+      return typeof decoded.exp === 'number' && decoded.exp > 0 ? decoded.exp * 1000 : null;
+    } catch {
+      return null;
     }
   }
 
