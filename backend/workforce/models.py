@@ -30,6 +30,10 @@ class Position(models.Model):
             ),
         ]
 
+    @property
+    def staffing_rules(self):
+        return self.staffing_requirements.filter(active=True)
+
     def __str__(self):
         return self.name
 
@@ -48,6 +52,12 @@ class Zone(models.Model):
     name = models.CharField(max_length=100)
     color = models.CharField(
         max_length=7,
+        blank=True,
+    )
+    configured_shifts = models.ManyToManyField(
+        "Shift",
+        through="ZoneShiftPreset",
+        related_name="configured_zones",
         blank=True,
     )
 
@@ -92,6 +102,71 @@ class Shift(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ZoneShiftPreset(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="zone_shift_presets")
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name="shift_presets")
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name="zone_presets")
+    active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "zone__name", "shift__start_time"]
+        constraints = [
+            models.UniqueConstraint(fields=["company", "zone", "shift"], name="unique_zone_shift_preset_per_company"),
+        ]
+
+    def __str__(self):
+        return f"{self.zone} - {self.shift}"
+
+
+class ZoneShiftPositionRequirement(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="zone_shift_position_requirements")
+    zone_shift_preset = models.ForeignKey(
+        ZoneShiftPreset,
+        on_delete=models.CASCADE,
+        related_name="position_requirements",
+    )
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, related_name="zone_shift_requirements")
+    required_count = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "zone_shift_preset", "position"],
+                name="unique_position_per_zone_shift",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.zone_shift_preset} - {self.position} ({self.required_count})"
+
+
+class StaffingRequirement(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="staffing_requirements")
+    weekday = models.PositiveSmallIntegerField()
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, related_name="staffing_requirements")
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name="staffing_requirements")
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name="staffing_requirements")
+    minimum_count = models.PositiveIntegerField(default=0)
+    maximum_count = models.PositiveIntegerField(null=True, blank=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "weekday", "position", "zone", "shift"],
+                name="unique_staffing_requirement_per_weekday",
+            ),
+            models.CheckConstraint(condition=models.Q(weekday__gte=0, weekday__lte=6), name="valid_staffing_weekday"),
+        ]
+
+    def __str__(self):
+        return f"{self.position} - {self.zone} - {self.shift} ({self.weekday})"
 
 
 class Employee(models.Model):

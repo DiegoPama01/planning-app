@@ -1,19 +1,51 @@
 import datetime
 
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from organizations.models import Company
-from .models import Employee, PlanningAssignment, Position
+from .models import Employee, PlanningAssignment, Position, StaffingRequirement, ZoneShiftPreset
 from .serializers import (
     EmployeeSerializer,
     PlanningAssignmentSerializer,
     PlanningWeekSerializer,
     PlanningWeekWriteSerializer,
     PositionSerializer,
+    StaffingRequirementSerializer,
+    ZoneShiftPresetSerializer,
 )
+
+
+class CompanyScopedViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_company(self):
+        return get_object_or_404(Company, id=self.kwargs["company_id"], memberships__user=self.request.user)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["company"] = self.get_company()
+        return context
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.get_company())
+
+
+class ZoneShiftPresetViewSet(CompanyScopedViewSet):
+    serializer_class = ZoneShiftPresetSerializer
+
+    def get_queryset(self):
+        return ZoneShiftPreset.objects.filter(company=self.get_company()).select_related("zone", "shift")
+
+
+class StaffingRequirementViewSet(CompanyScopedViewSet):
+    serializer_class = StaffingRequirementSerializer
+
+    def get_queryset(self):
+        return StaffingRequirement.objects.filter(company=self.get_company()).select_related("position", "zone", "shift")
 
 
 class PositionViewSet(viewsets.ModelViewSet):
@@ -33,6 +65,11 @@ class PositionViewSet(viewsets.ModelViewSet):
         return Position.objects.filter(
             company=company,
         ).order_by("name")
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["company"] = self.get_company()
+        return context
 
     def perform_create(self, serializer):
         serializer.save(
@@ -115,6 +152,8 @@ class PlanningWeekView(APIView):
                 "week_start": week_start,
                 "week_end": week_start + datetime.timedelta(days=6),
                 "assignments": self.get_queryset(),
+                "zone_shift_presets": ZoneShiftPreset.objects.filter(company=self.get_company(), active=True).select_related("zone", "shift"),
+                "requirements": StaffingRequirement.objects.filter(company=self.get_company(), active=True),
             }
         )
         return Response(serializer.data)
@@ -139,33 +178,36 @@ class PlanningWeekView(APIView):
         seen_keys = set()
         saved_assignments = []
 
-        for assignment_data in assignments_data:
-            key = (assignment_data["employee"].id, assignment_data["work_date"])
-            seen_keys.add(key)
-            instance = existing_assignments.get(key)
+        with transaction.atomic():
+            for assignment_data in assignments_data:
+                key = (assignment_data["employee"].id, assignment_data["work_date"])
+                seen_keys.add(key)
+                instance = existing_assignments.get(key)
 
-            if instance is None:
-                instance = PlanningAssignment(
-                    company=company,
-                    employee=assignment_data["employee"],
-                    work_date=assignment_data["work_date"],
-                )
+                if instance is None:
+                    instance = PlanningAssignment(
+                        company=company,
+                        employee=assignment_data["employee"],
+                        work_date=assignment_data["work_date"],
+                    )
 
-            instance.zone = assignment_data["zone"]
-            instance.shift = assignment_data["shift"]
-            instance.note = assignment_data.get("note", "")
-            instance.save()
-            saved_assignments.append(instance)
+                instance.zone = assignment_data["zone"]
+                instance.shift = assignment_data["shift"]
+                instance.note = assignment_data.get("note", "")
+                instance.save()
+                saved_assignments.append(instance)
 
-        for key, instance in existing_assignments.items():
-            if key not in seen_keys:
-                instance.delete()
+            for key, instance in existing_assignments.items():
+                if key not in seen_keys:
+                    instance.delete()
 
         response_serializer = PlanningWeekSerializer(
             {
                 "week_start": week_start,
                 "week_end": week_start + datetime.timedelta(days=6),
                 "assignments": saved_assignments,
+                "zone_shift_presets": ZoneShiftPreset.objects.filter(company=company, active=True).select_related("zone", "shift"),
+                "requirements": StaffingRequirement.objects.filter(company=company, active=True),
             }
         )
         return Response(response_serializer.data, status=status.HTTP_200_OK)

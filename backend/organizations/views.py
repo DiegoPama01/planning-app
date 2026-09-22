@@ -22,6 +22,11 @@ class ZoneViewSet(viewsets.ModelViewSet):
             company=self.get_company(),
         ).order_by("name")
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["company"] = self.get_company()
+        return context
+
     def perform_create(self, serializer):
         serializer.save(
             company=self.get_company(),
@@ -43,6 +48,11 @@ class ShiftViewSet(viewsets.ModelViewSet):
         return Shift.objects.filter(
             company=self.get_company(),
         ).order_by("name")
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["company"] = self.get_company()
+        return context
 
     def perform_create(self, serializer):
         serializer.save(

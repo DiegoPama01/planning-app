@@ -16,8 +16,12 @@
       [initialValue]="initialValue()"
       [submitLabel]="isEditMode ? 'Save changes' : 'Create zone'"
       [formError]="formError()"
-      [submitForm]="saveZone.bind(this)"
-      [cancel]="goBack.bind(this)"
+        [submitForm]="saveZone.bind(this)"
+        [cancel]="goBack.bind(this)"
+        [shifts]="shifts()"
+        [positions]="positions()"
+        [createShift]="createShift.bind(this)"
+        [createPosition]="createPosition.bind(this)"
     />
   }
 </section>

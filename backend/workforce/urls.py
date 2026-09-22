@@ -2,7 +2,7 @@ from django.urls import path
 
 from organizations.views import ShiftViewSet, ZoneViewSet
 
-from .views import EmployeeViewSet, PlanningWeekView, PositionViewSet
+from .views import EmployeeViewSet, PlanningWeekView, PositionViewSet, StaffingRequirementViewSet, ZoneShiftPresetViewSet
 
 
 position_list = PositionViewSet.as_view(
@@ -70,6 +70,11 @@ employee_detail = EmployeeViewSet.as_view(
     }
 )
 
+preset_list = ZoneShiftPresetViewSet.as_view({"get": "list", "post": "create"})
+preset_detail = ZoneShiftPresetViewSet.as_view({"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"})
+requirement_list = StaffingRequirementViewSet.as_view({"get": "list", "post": "create"})
+requirement_detail = StaffingRequirementViewSet.as_view({"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"})
+
 
 urlpatterns = [
     path(
@@ -117,4 +122,8 @@ urlpatterns = [
         PlanningWeekView.as_view(),
         name="planning-week-detail",
     ),
+    path("companies/<uuid:company_id>/zone-shift-presets/", preset_list, name="zone-shift-preset-list"),
+    path("companies/<uuid:company_id>/zone-shift-presets/<uuid:pk>/", preset_detail, name="zone-shift-preset-detail"),
+    path("companies/<uuid:company_id>/staffing-requirements/", requirement_list, name="staffing-requirement-list"),
+    path("companies/<uuid:company_id>/staffing-requirements/<uuid:pk>/", requirement_detail, name="staffing-requirement-detail"),
 ]

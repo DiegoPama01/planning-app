@@ -1,17 +1,85 @@
 from rest_framework import serializers
 
-from workforce.models import Shift, Zone
+from workforce.models import Position, Shift, Zone, ZoneShiftPositionRequirement, ZoneShiftPreset
+
+
+class ZoneShiftPositionRequirementInputSerializer(serializers.Serializer):
+    position = serializers.UUIDField()
+    required_count = serializers.IntegerField(min_value=1)
+
+
+class ZoneShiftPresetInputSerializer(serializers.Serializer):
+    shift = serializers.UUIDField()
+    positions = ZoneShiftPositionRequirementInputSerializer(many=True, required=False)
 
 
 class ZoneSerializer(serializers.ModelSerializer):
+    shift_presets = ZoneShiftPresetInputSerializer(many=True, required=False, write_only=True)
     class Meta:
         model = Zone
         fields = (
             "id",
             "name",
-            "color",
+            "color", "shift_presets",
         )
         read_only_fields = ("id",)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["shift_presets"] = [
+            {
+                "id": preset.id,
+                "shift": preset.shift_id,
+                "positions": list(
+                    preset.position_requirements.filter(
+                        company=instance.company,
+                    ).values("position", "required_count")
+                ),
+            }
+            for preset in instance.shift_presets.filter(active=True).prefetch_related("position_requirements")
+        ]
+        return data
+
+    def create(self, validated_data):
+        shift_presets = validated_data.pop("shift_presets", [])
+        instance = super().create(validated_data)
+        self._sync_shifts(instance, shift_presets)
+        return instance
+
+    def update(self, instance, validated_data):
+        shift_presets = validated_data.pop("shift_presets", None)
+        instance = super().update(instance, validated_data)
+        if shift_presets is not None:
+            self._sync_shifts(instance, shift_presets)
+        return instance
+
+    def _sync_shifts(self, zone, shift_presets):
+        company = self.context["company"]
+        ZoneShiftPreset.objects.filter(company=company, zone=zone).update(active=False)
+        for item in shift_presets:
+            shift = serializers.PrimaryKeyRelatedField(
+                queryset=Shift.objects.filter(company=company),
+            ).to_internal_value(item["shift"])
+            preset, _ = ZoneShiftPreset.objects.update_or_create(
+                company=company,
+                zone=zone,
+                shift=shift,
+                defaults={"active": True},
+            )
+            ZoneShiftPositionRequirement.objects.filter(
+                company=company,
+                zone_shift_preset=preset,
+            ).delete()
+            for position_item in item.get("positions", []):
+                position = position_item["position"]
+                if not Position.objects.filter(id=position, company=company).exists():
+                    raise serializers.ValidationError("All positions must belong to the active company.")
+                ZoneShiftPositionRequirement.objects.create(
+                    company=company,
+                    zone_shift_preset=preset,
+                    position_id=position,
+                    required_count=position_item.get("required_count", 1),
+                )
 
 
 class ShiftSerializer(serializers.ModelSerializer):
