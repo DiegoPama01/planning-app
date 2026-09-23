@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { randomFormColor } from '../../shared/color-utils';
 import { ShiftsFormComponent } from './shifts-form.component';
 import { ShiftUpsertPayload } from './shifts.model';
 import { ShiftsService } from './shifts.service';
@@ -38,7 +39,7 @@ export class ShiftsFormPageComponent {
         name: '',
         start_time: '',
         end_time: '',
-        color: '#0f172a',
+        color: randomFormColor(),
       };
     }
 

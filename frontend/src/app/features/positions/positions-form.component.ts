@@ -4,6 +4,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { randomFormColor } from '../../shared/color-utils';
 import { PositionUpsertPayload } from './positions.model';
 
 @Component({
@@ -21,7 +22,7 @@ export class PositionsFormComponent {
 
   protected readonly model = signal<PositionUpsertPayload>({
     name: '',
-    color: '#0f172a',
+    color: randomFormColor(),
   });
 
   constructor() {

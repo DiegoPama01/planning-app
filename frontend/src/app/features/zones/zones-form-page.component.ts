@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { randomFormColor } from '../../shared/color-utils';
 import { ZonesFormComponent } from './zones-form.component';
 import { ZoneUpsertPayload } from './zones.model';
 import { ZonesService } from './zones.service';
@@ -47,7 +48,7 @@ export class ZonesFormPageComponent {
     if (!zone) {
       return {
         name: '',
-        color: '#0f172a',
+        color: randomFormColor(),
         shift_presets: [],
       };
     }

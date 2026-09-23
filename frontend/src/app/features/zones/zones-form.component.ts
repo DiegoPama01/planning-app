@@ -10,6 +10,7 @@ import { ZoneShiftPositionRequirement, ZoneUpsertPayload } from './zones.model';
 import { Shift, ShiftUpsertPayload } from '../shifts/shifts.model';
 import { SelectionTableComponent } from '../../shared/selection-table/selection-table.component';
 import { SelectionTableItem } from '../../shared/selection-table/selection-table.model';
+import { randomFormColor } from '../../shared/color-utils';
 
 @Component({
   selector: 'app-zones-form',
@@ -30,14 +31,14 @@ export class ZonesFormComponent {
 
   protected readonly model = signal<ZoneUpsertPayload>({
     name: '',
-    color: '#0f172a',
+    color: randomFormColor(),
     shift_presets: [],
   });
   protected readonly localShifts = signal<Shift[]>([]);
   protected readonly localPositions = signal<Position[]>([]);
   protected readonly activeShiftId = signal<string | null>(null);
-  protected readonly newShift = signal<ShiftUpsertPayload>({ name: '', start_time: '', end_time: '', color: '#0f172a' });
-  protected readonly newPosition = signal<PositionUpsertPayload>({ name: '', color: '#0f172a' });
+  protected readonly newShift = signal<ShiftUpsertPayload>({ name: '', start_time: '', end_time: '', color: randomFormColor() });
+  protected readonly newPosition = signal<PositionUpsertPayload>({ name: '', color: randomFormColor() });
   protected readonly createError = signal<string | null>(null);
   protected readonly shiftOptions = computed<SelectionTableItem[]>(() => this.localShifts().map((shift) => ({
     id: shift.id,
@@ -159,7 +160,7 @@ export class ZonesFormComponent {
       this.localShifts.update((items) => [...items, shift]);
       this.toggleShift(shift.id, true);
       this.activeShiftId.set(shift.id);
-      this.newShift.set({ name: '', start_time: '', end_time: '', color: '#0f172a' });
+      this.newShift.set({ name: '', start_time: '', end_time: '', color: randomFormColor() });
     } catch {
       this.createError.set('We could not create this shift.');
     }
@@ -171,7 +172,7 @@ export class ZonesFormComponent {
       const position = await this.createPosition()(this.newPosition());
       this.localPositions.update((items) => [...items, position]);
       this.addPosition(position.id);
-      this.newPosition.set({ name: '', color: '#0f172a' });
+      this.newPosition.set({ name: '', color: randomFormColor() });
     } catch {
       this.createError.set('We could not create this position.');
     }

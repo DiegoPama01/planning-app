@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { randomFormColor } from '../../shared/color-utils';
 import { PositionsFormComponent } from './positions-form.component';
 import { PositionUpsertPayload } from './positions.model';
 import { PositionsService } from './positions.service';
@@ -37,7 +38,7 @@ export class PositionsFormPageComponent {
     if (!position) {
       return {
         name: '',
-        color: '#0f172a',
+        color: randomFormColor(),
       };
     }
 
