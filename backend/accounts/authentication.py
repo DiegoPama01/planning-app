@@ -1,5 +1,3 @@
-import base64
-import json
 from typing import Any
 
 from django.conf import settings
@@ -30,9 +28,6 @@ class AuthentikUserInfoAuthentication(authentication.BaseAuthentication):
 
         token = parts[1].strip()
         if not token:
-            return None
-
-        if not _looks_like_authentik_token(token):
             return None
 
         try:
@@ -83,35 +78,3 @@ def _split_name(name: str) -> tuple[str, str]:
     return first_name, last_name.strip()
 
 
-def _looks_like_authentik_token(token: str) -> bool:
-    payload = _decode_jwt_payload(token)
-    issuer = payload.get("iss") if isinstance(payload.get("iss"), str) else ""
-    configured_issuer = settings.AUTHENTIK["ISSUER_URL"]
-
-    # Authentik can return opaque access tokens. Let its userinfo endpoint
-    # validate those instead of rejecting them before the request is made.
-    if not payload:
-        return True
-
-    return bool(
-        issuer
-        and configured_issuer
-        and issuer.rstrip("/") == configured_issuer.rstrip("/")
-    )
-
-
-def _decode_jwt_payload(token: str) -> dict[str, Any]:
-    parts = token.split(".")
-    if len(parts) != 3:
-        return {}
-
-    payload = parts[1]
-    payload += "=" * (-len(payload) % 4)
-
-    try:
-        decoded = base64.urlsafe_b64decode(payload.encode("utf-8")).decode("utf-8")
-        parsed = json.loads(decoded)
-    except (ValueError, json.JSONDecodeError):
-        return {}
-
-    return parsed if isinstance(parsed, dict) else {}

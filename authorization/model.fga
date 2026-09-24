@@ -1,0 +1,23 @@
+model
+  schema 1.1
+
+type user
+
+type project
+  relations
+    define developer: [user]
+
+type installation
+  relations
+    define project: [project]
+    define admin: [user]
+    define member: [user]
+
+    define can_access: admin or member or developer from project
+
+    define can_view_planning: admin or member
+    define can_create_planning: admin
+    define can_edit_planning: admin
+    define can_delete_planning: admin
+
+    define can_view_logs: developer from project

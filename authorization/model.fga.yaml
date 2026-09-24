@@ -1,0 +1,80 @@
+name: Cuadrant authorization model
+
+model_file: ./model.fga
+
+tuples:
+  - user: project:cuadrant
+    relation: project
+    object: installation:hotel-one
+
+  - user: project:cuadrant
+    relation: project
+    object: installation:hotel-two
+
+  - user: user:alice
+    relation: admin
+    object: installation:hotel-one
+
+  - user: user:alice
+    relation: member
+    object: installation:hotel-two
+
+  - user: user:bob
+    relation: member
+    object: installation:hotel-one
+
+  - user: user:diego
+    relation: developer
+    object: project:cuadrant
+
+tests:
+  - name: installation_admin
+    check:
+      - user: user:alice
+        object: installation:hotel-one
+        assertions:
+          can_access: true
+          can_view_planning: true
+          can_create_planning: true
+          can_edit_planning: true
+          can_delete_planning: true
+          can_view_logs: false
+
+  - name: installation_member
+    check:
+      - user: user:alice
+        object: installation:hotel-two
+        assertions:
+          can_access: true
+          can_view_planning: true
+          can_create_planning: false
+          can_edit_planning: false
+          can_delete_planning: false
+          can_view_logs: false
+
+  - name: developer_permissions
+    check:
+      - user: user:diego
+        object: installation:hotel-one
+        assertions:
+          can_access: true
+          can_view_planning: false
+          can_edit_planning: false
+          can_view_logs: true
+
+      - user: user:diego
+        object: installation:hotel-two
+        assertions:
+          can_access: true
+          can_view_planning: false
+          can_view_logs: true
+
+  - name: tenant_isolation
+    check:
+      - user: user:bob
+        object: installation:hotel-two
+        assertions:
+          can_access: false
+          can_view_planning: false
+          can_edit_planning: false
+          can_view_logs: false

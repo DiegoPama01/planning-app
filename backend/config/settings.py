@@ -124,7 +124,6 @@ MAILERS = {
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "accounts.authentication.AuthentikUserInfoAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
@@ -142,6 +141,7 @@ CSRF_TRUSTED_ORIGINS = get_list(
 AUTHENTIK = {
     "ENABLED": get_bool("AUTHENTIK_ENABLED", default=False),
     "ISSUER_URL": get_env("AUTHENTIK_ISSUER_URL", ""),
+    "INTERNAL_URL": get_env("AUTHENTIK_INTERNAL_URL", ""),
     "DISCOVERY_URL": get_env("AUTHENTIK_DISCOVERY_URL", ""),
     "JWKS_URL": get_env("AUTHENTIK_JWKS_URL", ""),
     "CLIENT_ID": get_env("AUTHENTIK_CLIENT_ID", ""),

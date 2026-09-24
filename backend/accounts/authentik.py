@@ -307,7 +307,7 @@ def _get_default_group_ids() -> list[str]:
 
 
 def _build_api_url(path: str) -> str:
-    issuer_url = settings.AUTHENTIK["ISSUER_URL"]
+    issuer_url = settings.AUTHENTIK["INTERNAL_URL"] or settings.AUTHENTIK["ISSUER_URL"]
     parsed_issuer = parse.urlparse(issuer_url)
     base_url = parse.urlunparse(
         (parsed_issuer.scheme, parsed_issuer.netloc, "", "", "", "")
