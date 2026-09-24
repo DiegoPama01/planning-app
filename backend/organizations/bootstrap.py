@@ -18,7 +18,7 @@ def ensure_user_company_membership(user):
     CompanyMembership.objects.create(
         company=company,
         user=user,
-        role=CompanyMembership.Role.OWNER,
+        role=CompanyMembership.Role.ADMIN,
     )
 
 

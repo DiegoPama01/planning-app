@@ -20,9 +20,8 @@ class Company(models.Model):
 
 class CompanyMembership(models.Model):
     class Role(models.TextChoices):
-        OWNER = "owner", "Owner"
-        MANAGER = "manager", "Manager"
-        VIEWER = "viewer", "Viewer"
+        ADMIN = "admin", "Admin"
+        MEMBER = "member", "Member"
 
     id = models.UUIDField(
         primary_key=True,
@@ -42,7 +41,7 @@ class CompanyMembership(models.Model):
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
-        default=Role.VIEWER,
+        default=Role.MEMBER,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

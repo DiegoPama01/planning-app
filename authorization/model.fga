@@ -11,7 +11,7 @@ type installation
   relations
     define project: [project]
     define admin: [user]
-    define member: [user]
+    define member: [user]   
 
     define can_access: admin or member or developer from project
 
