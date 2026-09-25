@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from organizations.models import Company
+from authorization.permissions import InstallationPlanningPermission
 from .models import Employee, PlanningAssignment, Position, StaffingRequirement, ZoneShiftPreset
 from .serializers import (
     EmployeeSerializer,
@@ -111,7 +112,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
 
 class PlanningWeekView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, InstallationPlanningPermission]
 
     def get_company(self):
         return get_object_or_404(

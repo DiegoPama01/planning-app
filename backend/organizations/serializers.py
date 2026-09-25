@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
 from workforce.models import Position, Shift, Zone, ZoneShiftPositionRequirement, ZoneShiftPreset
+from organizations.models import Company
+
+
+class InstallationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = ("id", "name", "slug", "created_at")
+        read_only_fields = ("id", "slug", "created_at")
 
 
 class ZoneShiftPositionRequirementInputSerializer(serializers.Serializer):

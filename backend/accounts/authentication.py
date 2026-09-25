@@ -6,6 +6,7 @@ from rest_framework import authentication
 from rest_framework.exceptions import AuthenticationFailed
 
 from organizations.bootstrap import ensure_user_company_membership
+from authorization import fga
 
 from .authentik import AuthentikProvisioningError, get_userinfo
 from .models import User
@@ -45,7 +46,8 @@ class AuthentikUserInfoAuthentication(authentication.BaseAuthentication):
 
 def _sync_user_from_claims(claims: dict[str, Any]) -> User | AnonymousUser:
     email = claims.get("email")
-    if not isinstance(email, str) or not email:
+    sub = claims.get(settings.AUTHENTIK["SUB_CLAIM"])
+    if not isinstance(email, str) or not email or not isinstance(sub, str) or not sub:
         return AnonymousUser()
 
     raw_name = claims.get("name")
@@ -57,6 +59,7 @@ def _sync_user_from_claims(claims: dict[str, Any]) -> User | AnonymousUser:
         defaults={
             "first_name": first_name,
             "last_name": last_name,
+            "authentik_sub": sub,
         },
     )
 
@@ -67,9 +70,13 @@ def _sync_user_from_claims(claims: dict[str, Any]) -> User | AnonymousUser:
     if not created and last_name and user.last_name != last_name:
         user.last_name = last_name
         updated_fields.append("last_name")
+    if not created and user.authentik_sub != sub:
+        user.authentik_sub = sub
+        updated_fields.append("authentik_sub")
     if updated_fields:
         user.save(update_fields=updated_fields)
     ensure_user_company_membership(user)
+    fga.provision_user(sub)
     return user
 
 

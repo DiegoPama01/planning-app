@@ -157,6 +157,16 @@ AUTHENTIK = {
     "DEFAULT_GROUP_IDS": get_list("AUTHENTIK_DEFAULT_GROUP_IDS", []),
 }
 
+OPENFGA = {
+    "ENABLED": get_bool("OPENFGA_ENABLED", default=False),
+    "API_URL": get_env("OPENFGA_API_URL", "http://localhost:8080"),
+    "STORE_ID": get_env("OPENFGA_STORE_ID", ""),
+    "AUTHORIZATION_MODEL_ID": get_env("OPENFGA_AUTHORIZATION_MODEL_ID", ""),
+    "API_TOKEN": get_env("OPENFGA_API_TOKEN", ""),
+    "TIMEOUT_SECONDS": float(get_env("OPENFGA_TIMEOUT_SECONDS", "5")),
+    "PROJECT_OBJECT": get_env("OPENFGA_PROJECT_OBJECT", "project:cuadrant"),
+}
+
 if AUTHENTIK["ENABLED"]:
     missing_authentik_vars = [
         name
@@ -166,5 +176,19 @@ if AUTHENTIK["ENABLED"]:
     if missing_authentik_vars:
         missing_vars = ", ".join(missing_authentik_vars)
         raise RuntimeError(f"Missing required Authentik settings: {missing_vars}")
+
+if OPENFGA["ENABLED"]:
+    missing_openfga_vars = [
+        name
+        for name, value in (
+            ("OPENFGA_API_URL", OPENFGA["API_URL"]),
+            ("OPENFGA_STORE_ID", OPENFGA["STORE_ID"]),
+            ("OPENFGA_AUTHORIZATION_MODEL_ID", OPENFGA["AUTHORIZATION_MODEL_ID"]),
+        )
+        if not value
+    ]
+    if missing_openfga_vars:
+        missing_vars = ", ".join(missing_openfga_vars)
+        raise RuntimeError(f"Missing required OpenFGA settings: {missing_vars}")
 
 LOG_LEVEL = get_env("DJANGO_LOG_LEVEL", "INFO")
