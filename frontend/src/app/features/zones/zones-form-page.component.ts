@@ -3,9 +3,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { randomFormColor } from '../../shared/color-utils';
 import { CompanyService } from '../../core/company/company.service';
-import { collectInstallationOptions } from '../../core/company/installation-utils';
-import { InstallationOption } from '../../core/company/installation.model';
-import { InstallationsService } from '../../core/company/installations.service';
 import { ZonesFormComponent } from './zones-form.component';
 import { ZoneUpsertPayload } from './zones.model';
 import { ZonesService } from './zones.service';
@@ -26,15 +23,12 @@ export class ZonesFormPageComponent {
   private readonly router = inject(Router);
   private readonly zonesService = inject(ZonesService);
   private readonly companyService = inject(CompanyService);
-  private readonly installationsService = inject(InstallationsService);
   private readonly shiftsService = inject(ShiftsService);
   private readonly positionsService = inject(PositionsService);
   protected readonly shiftsResource = resource({ loader: async () => firstValueFrom(this.shiftsService.list()) });
   protected readonly shifts = computed<Shift[]>(() => this.shiftsResource.value() ?? []);
   protected readonly positionsResource = resource({ loader: async () => firstValueFrom(this.positionsService.list()) });
   protected readonly positions = computed<Position[]>(() => this.positionsResource.value() ?? []);
-  protected readonly zonesResource = resource({ loader: async () => firstValueFrom(this.zonesService.list()) });
-  protected readonly installationsResource = resource({ loader: async () => firstValueFrom(this.installationsService.listForActiveCompany()) });
 
   private readonly zoneId = this.route.snapshot.paramMap.get('id');
   protected readonly isEditMode = this.zoneId !== null;
@@ -77,15 +71,6 @@ export class ZonesFormPageComponent {
       shift_presets: zone.shift_presets ?? [],
     };
   });
-
-  protected readonly installations = computed<InstallationOption[]>(() =>
-    collectInstallationOptions([
-      ...this.shifts(),
-      ...this.positions(),
-      ...(this.zonesResource.value() ?? []),
-      ...(this.zoneResource.value() ? [this.zoneResource.value()!] : []),
-    ], this.installationsResource.value() ?? []),
-  );
 
   protected async saveZone(payload: ZoneUpsertPayload): Promise<void> {
     this.formError.set(null);

@@ -2,24 +2,6 @@
   <div hlmCardContent class="pt-6">
     <form [formRoot]="zoneForm">
       <hlm-field-group class="space-y-6">
-        @if (installations().length > 0) {
-          <hlm-field>
-            <label hlmFieldLabel for="zone-installation-trigger">Installation</label>
-            <hlm-select [value]="model().installation || null" [itemToString]="installationToLabel" (valueChange)="updateInstallation($event ?? '')">
-              <hlm-select-trigger id="zone-installation-trigger" class="w-full">
-                <hlm-select-value placeholder="Use default installation" />
-              </hlm-select-trigger>
-              <hlm-select-content *hlmSelectPortal>
-                <hlm-select-group>
-                  @for (installation of installations(); track installation.id) {
-                    <hlm-select-item [value]="installation.id">{{ installation.name }}</hlm-select-item>
-                  }
-                </hlm-select-group>
-              </hlm-select-content>
-            </hlm-select>
-          </hlm-field>
-        }
-
         <div class="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
           <hlm-field>
             <label hlmFieldLabel for="zone-name">Name</label>
@@ -55,7 +37,7 @@
 
         <hlm-field>
           <label hlmFieldLabel for="zone-description">Description</label>
-          <input hlmInput id="zone-description" type="text" placeholder="Where this work area is located" [formField]="zoneForm.description" />
+          <textarea hlmTextarea id="zone-description" placeholder="Where this work area is located" [formField]="zoneForm.description"></textarea>
         </hlm-field>
 
         <div class="flex items-center gap-3 rounded-lg px-4 py-3">

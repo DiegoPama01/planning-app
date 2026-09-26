@@ -2,24 +2,6 @@
   <div hlmCardContent class="pt-6">
     <form [formRoot]="positionForm">
       <hlm-field-group class="space-y-6">
-        @if (installations().length > 0) {
-          <hlm-field>
-            <label hlmFieldLabel for="position-installation-trigger">Installation</label>
-            <hlm-select [value]="model().installation || null" [itemToString]="installationToLabel" (valueChange)="updateInstallation($event ?? '')">
-              <hlm-select-trigger id="position-installation-trigger" class="w-full">
-                <hlm-select-value placeholder="Use default installation" />
-              </hlm-select-trigger>
-              <hlm-select-content *hlmSelectPortal>
-                <hlm-select-group>
-                  @for (installation of installations(); track installation.id) {
-                    <hlm-select-item [value]="installation.id">{{ installation.name }}</hlm-select-item>
-                  }
-                </hlm-select-group>
-              </hlm-select-content>
-            </hlm-select>
-          </hlm-field>
-        }
-
         <hlm-field>
           <label hlmFieldLabel for="position-name">Name</label>
           <input hlmInput id="position-name" type="text" placeholder="Cashier" [formField]="positionForm.name" />
@@ -42,7 +24,7 @@
 
         <hlm-field>
           <label hlmFieldLabel for="position-description">Description</label>
-          <input hlmInput id="position-description" type="text" placeholder="What this role does" [formField]="positionForm.description" />
+          <textarea hlmTextarea id="position-description" placeholder="What this role does" [formField]="positionForm.description"></textarea>
         </hlm-field>
 
         <hlm-field>

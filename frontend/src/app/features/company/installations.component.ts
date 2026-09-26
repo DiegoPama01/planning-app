@@ -39,17 +39,14 @@ export class InstallationsComponent {
     void this.installationsResource.reload();
   }
 
-  protected selectInstallation(installationId: string | null): void {
-    this.companyService.setActiveInstallationId(installationId);
-  }
-
   protected async deleteInstallation(installationId: string): Promise<void> {
     this.deletingIds.update((ids) => new Set(ids).add(installationId));
 
     try {
       await firstValueFrom(this.installationsService.delete(installationId));
       if (this.activeInstallationId() === installationId) {
-        this.selectInstallation(null);
+        const nextInstallation = this.installations().find((installation) => installation.id !== installationId);
+        this.companyService.setActiveInstallationId(nextInstallation?.id ?? null);
       }
       await this.installationsResource.reload();
     } finally {

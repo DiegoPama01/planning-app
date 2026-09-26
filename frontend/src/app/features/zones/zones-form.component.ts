@@ -6,9 +6,8 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
-import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
-import { InstallationOption } from '../../core/company/installation.model';
+import { HlmTextareaImports } from '@spartan-ng/helm/textarea';
 import { Position, PositionUpsertPayload } from '../positions/positions.model';
 import { ZoneShiftPositionRequirement, ZoneUpsertPayload } from './zones.model';
 import { Shift, ShiftUpsertPayload } from '../shifts/shifts.model';
@@ -18,7 +17,7 @@ import { randomFormColor } from '../../shared/color-utils';
 
 @Component({
   selector: 'app-zones-form',
-  imports: [FormRoot, FormField, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmFieldImports, HlmInputImports, HlmSelectImports, HlmSwitchImports, SelectionTableComponent],
+  imports: [FormRoot, FormField, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmFieldImports, HlmInputImports, HlmSwitchImports, HlmTextareaImports, SelectionTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './zones-form.component.html',
 })
@@ -27,7 +26,6 @@ export class ZonesFormComponent {
   readonly initialValue = input.required<ZoneUpsertPayload>();
   readonly submitLabel = input('Save zone');
   readonly formError = input<string | null>(null);
-  readonly installations = input<InstallationOption[]>([]);
   readonly submitForm = input.required<(value: ZoneUpsertPayload) => Promise<void>>();
   readonly cancelLink = input.required<string>();
 
@@ -171,7 +169,7 @@ export class ZonesFormComponent {
   protected async saveNewShift(): Promise<void> {
     this.createError.set(null);
     try {
-      const shift = await this.createShift()(this.newShift());
+      const shift = await this.createShift()({ ...this.newShift(), installation: this.model().installation });
       this.localShifts.update((items) => [...items, shift]);
       this.toggleShift(shift.id, true);
       this.activeShiftId.set(shift.id);
@@ -184,7 +182,7 @@ export class ZonesFormComponent {
   protected async saveNewPosition(): Promise<void> {
     this.createError.set(null);
     try {
-      const position = await this.createPosition()(this.newPosition());
+      const position = await this.createPosition()({ ...this.newPosition(), installation: this.model().installation });
       this.localPositions.update((items) => [...items, position]);
       this.addPosition(position.id);
       this.newPosition.set({ name: '', code: '', description: '', color: randomFormColor(), sort_order: 0, active: true });
@@ -216,20 +214,6 @@ export class ZonesFormComponent {
       },
     },
   );
-
-  protected readonly installationToLabel = (value: string | null | undefined) => {
-    if (!value) {
-      return '';
-    }
-
-    return this.installations().find((installation) => installation.id === value)?.name ?? value;
-  };
-
-  protected updateInstallation(installationId: string): void {
-    this.model.update((value) => ({ ...value, installation: installationId || undefined }));
-    this.newShift.update((value) => ({ ...value, installation: installationId || undefined }));
-    this.newPosition.update((value) => ({ ...value, installation: installationId || undefined }));
-  }
 
   protected updateActive(active: boolean): void {
     this.model.update((value) => ({ ...value, active }));

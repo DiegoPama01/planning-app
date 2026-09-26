@@ -14,8 +14,6 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { PositionsService } from '../positions/positions.service';
-import { ShiftsService } from '../shifts/shifts.service';
-import { ZonesService } from '../zones/zones.service';
 import { Employee } from './employees.model';
 import { EmployeesService } from './employees.service';
 
@@ -26,8 +24,6 @@ interface EmployeeRow {
   fullName: string;
   active: boolean;
   positionName: string;
-  zonesSummary: string;
-  shiftsSummary: string;
 }
 
 @Component({
@@ -39,8 +35,6 @@ interface EmployeeRow {
 export class EmployeesComponent {
   private readonly employeesService = inject(EmployeesService);
   private readonly positionsService = inject(PositionsService);
-  private readonly zonesService = inject(ZonesService);
-  private readonly shiftsService = inject(ShiftsService);
   private readonly deletingIds = signal<Set<string>>(new Set());
 
   protected readonly employeesResource = resource({
@@ -49,8 +43,6 @@ export class EmployeesComponent {
         forkJoin({
           employees: this.employeesService.list(),
           positions: this.positionsService.list(),
-          zones: this.zonesService.list(),
-          shifts: this.shiftsService.list(),
         }),
       ),
   });
@@ -63,11 +55,9 @@ export class EmployeesComponent {
     }
 
     const positionsById = new Map(data.positions.map((position) => [position.id, position.name]));
-    const zonesById = new Map(data.zones.map((zone) => [zone.id, zone.name]));
-    const shiftsById = new Map(data.shifts.map((shift) => [shift.id, shift.name]));
 
     return data.employees.map((employee) =>
-      this.mapEmployeeRow(employee, positionsById, zonesById, shiftsById),
+      this.mapEmployeeRow(employee, positionsById),
     );
   });
   protected readonly isDeleting = (employeeId: string) => this.deletingIds().has(employeeId);
@@ -106,8 +96,6 @@ export class EmployeesComponent {
   private mapEmployeeRow(
     employee: Employee,
     positionsById: Map<string, string>,
-    zonesById: Map<string, string>,
-    shiftsById: Map<string, string>,
   ): EmployeeRow {
     const firstName = employee.first_name.trim();
     const lastName = employee.last_name.trim();
@@ -120,26 +108,6 @@ export class EmployeesComponent {
       fullName: fullName || 'Unnamed employee',
       active: employee.active,
       positionName: positionsById.get(employee.position) ?? 'Unknown position',
-      zonesSummary: this.formatLookupNames(employee.allowed_zones, zonesById, 'No zones'),
-      shiftsSummary: this.formatLookupNames(employee.allowed_shifts, shiftsById, 'No shifts'),
     };
-  }
-
-  private formatLookupNames(
-    ids: string[],
-    namesById: Map<string, string>,
-    emptyLabel: string,
-  ): string {
-    const names = ids.map((id) => namesById.get(id) ?? 'Unknown').filter((name) => name.length > 0);
-
-    if (names.length === 0) {
-      return emptyLabel;
-    }
-
-    if (names.length <= 2) {
-      return names.join(', ');
-    }
-
-    return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
   }
 }

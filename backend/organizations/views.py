@@ -170,8 +170,13 @@ class ZoneViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         company = self.get_company()
-        serializer.save(
+        zone = serializer.save(
             installation=serializer.validated_data.get("installation") or get_default_installation(company),
+        )
+        fga.provision_installation_resource(
+            resource_type="zone",
+            resource_id=zone.id,
+            installation_id=zone.installation_id,
         )
 
 
@@ -198,6 +203,11 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         company = self.get_company()
-        serializer.save(
+        shift = serializer.save(
             installation=serializer.validated_data.get("installation") or get_default_installation(company),
+        )
+        fga.provision_installation_resource(
+            resource_type="shift",
+            resource_id=shift.id,
+            installation_id=shift.installation_id,
         )

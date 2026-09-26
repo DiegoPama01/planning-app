@@ -2,24 +2,6 @@
   <div hlmCardContent class="pt-6">
     <form [formRoot]="shiftForm">
       <hlm-field-group class="space-y-6">
-        @if (installations().length > 0) {
-          <hlm-field>
-            <label hlmFieldLabel for="shift-installation-trigger">Installation</label>
-            <hlm-select [value]="model().installation || null" [itemToString]="installationToLabel" (valueChange)="updateInstallation($event ?? '')">
-              <hlm-select-trigger id="shift-installation-trigger" class="w-full">
-                <hlm-select-value placeholder="Use default installation" />
-              </hlm-select-trigger>
-              <hlm-select-content *hlmSelectPortal>
-                <hlm-select-group>
-                  @for (installation of installations(); track installation.id) {
-                    <hlm-select-item [value]="installation.id">{{ installation.name }}</hlm-select-item>
-                  }
-                </hlm-select-group>
-              </hlm-select-content>
-            </hlm-select>
-          </hlm-field>
-        }
-
         <hlm-field>
           <label hlmFieldLabel for="shift-name">Name</label>
           <input hlmInput id="shift-name" type="text" placeholder="Morning" [formField]="shiftForm.name" />

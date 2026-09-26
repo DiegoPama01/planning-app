@@ -3,23 +3,7 @@
     <button hlmSidebarTrigger></button>
     <hlm-separator orientation="vertical" class="mr-2" />
 
-    @if (installations().length > 0) {
-      <hlm-select class="min-w-0 flex-1 sm:ml-auto sm:max-w-64" [value]="activeInstallationId()" [itemToString]="installationToLabel" (valueChange)="selectInstallation($event)">
-        <hlm-select-trigger id="active-installation-trigger" class="w-full">
-          <hlm-select-value placeholder="All installations" />
-        </hlm-select-trigger>
-        <hlm-select-content *hlmSelectPortal>
-          <hlm-select-group>
-            <hlm-select-item [value]="null">All installations</hlm-select-item>
-            @for (installation of installations(); track installation.id) {
-              <hlm-select-item [value]="installation.id">{{ installation.name }}</hlm-select-item>
-            }
-          </hlm-select-group>
-        </hlm-select-content>
-      </hlm-select>
-    }
-
-    <div hlmInputGroup class="hidden w-full sm:w-auto md:flex">
+    <div hlmInputGroup class="ml-auto hidden w-full sm:w-auto md:flex">
       <input hlmInputGroupInput placeholder="Type to search..." />
       <div hlmInputGroupAddon>
         <ng-icon name="lucideSearch" />

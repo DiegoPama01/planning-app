@@ -5,6 +5,7 @@ import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AuthService } from '../core/auth/auth.service';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
+import { CompanyPermissionsService } from '../core/company/company-permissions.service';
 import { InstallationsService } from '../core/company/installations.service';
 
 @Component({
@@ -18,6 +19,7 @@ import { InstallationsService } from '../core/company/installations.service';
 })
 export class MainLayoutComponent {
   private readonly authService = inject(AuthService);
+  private readonly permissions = inject(CompanyPermissionsService);
   private readonly installationsService = inject(InstallationsService);
   private readonly router = inject(Router);
 
@@ -43,7 +45,6 @@ export class MainLayoutComponent {
 
   protected readonly companyName = computed(() => this.authService.activeCompany()?.name ?? 'Workspace');
   protected readonly companyPlan = computed(() => this.authService.activeCompany()?.role ?? 'member');
-  protected readonly companies = computed(() => this.authService.currentUser()?.companies ?? []);
   protected readonly activeCompanyId = computed(() => this.authService.activeCompany()?.id ?? null);
   protected readonly activeInstallationId = computed(() => this.authService.activeInstallationId());
   protected readonly installationsResource = resource({
@@ -53,17 +54,20 @@ export class MainLayoutComponent {
         return [];
       }
 
-      return firstValueFrom(this.installationsService.listForActiveCompany());
+      const installations = await firstValueFrom(this.installationsService.listForActiveCompany());
+      const activeInstallationId = this.authService.activeInstallationId();
+
+      if (installations.length > 0 && !installations.some((installation) => installation.id === activeInstallationId)) {
+        this.authService.setActiveInstallationId(installations[0].id);
+      }
+
+      return installations;
     },
   });
   protected readonly installations = computed(() => this.installationsResource.value() ?? []);
+  protected readonly canManageCompany = computed(() => this.permissions.canManageCompany());
 
-  protected selectCompany(companyId: string): void {
-    const company = this.companies().find((item) => item.id === companyId) ?? null;
-    this.authService.setActiveCompany(company);
-  }
-
-  protected selectInstallation(installationId: string | null): void {
+  protected selectInstallation(installationId: string): void {
     this.authService.setActiveInstallationId(installationId);
   }
 

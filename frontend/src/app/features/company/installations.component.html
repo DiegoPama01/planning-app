@@ -33,9 +33,6 @@
       </div>
     </hlm-card>
   } @else {
-    <div class="flex justify-end">
-      <button hlmBtn type="button" variant="outline" (click)="selectInstallation(null)">Use all installations</button>
-    </div>
     <div hlmTableContainer class="rounded-lg border bg-card">
       <table hlmTable class="min-w-[820px]">
         <thead hlmTableHeader>
@@ -66,7 +63,6 @@
               <td hlmTableCell>{{ installation.active === false ? 'Inactive' : 'Active' }}</td>
               <td hlmTableCell class="text-right">
                 <div class="flex justify-end gap-2">
-                  <button hlmBtn type="button" variant="outline" size="sm" (click)="selectInstallation(installation.id)">Use</button>
                   @if (canManage()) {
                     <button hlmBtn type="button" variant="outline" size="sm" [routerLink]="[installation.id, 'edit']">Edit</button>
                     <hlm-alert-dialog>

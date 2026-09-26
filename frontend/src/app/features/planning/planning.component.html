@@ -162,7 +162,7 @@
               @for (employee of visibleEmployees(); track employee.id) {
                 <app-planning-employee-card
                   [employee]="employee"
-                  [positionName]="positionName(employee.position)"
+                  [positionName]="positionName(employeePositionId(employee))"
                 />
               }
               @if (visibleEmployees().length === 0) {
@@ -186,12 +186,12 @@
         <div hlmTableContainer class="rounded-xl border bg-card">
           <table hlmTable class="w-full min-w-[58rem] table-fixed">
             <caption class="sr-only">
-              Cuadrante semanal por zona, turno y posición
+              Cuadrante semanal por zona y turno
             </caption>
             <thead hlmTableHeader>
               <tr hlmTableRow>
                 <th hlmTableHead class="sticky left-0 z-10 w-40 min-w-40 bg-card">
-                  <span class="sr-only">Zona, turno y posición</span>
+                  <span class="sr-only">Zona, turno y posiciones necesarias</span>
                 </th>
                 @for (day of days(); track day.isoDate) {
                   <th hlmTableHead class="w-28 min-w-28 px-2 text-center">
@@ -225,14 +225,18 @@
                         aria-hidden="true"
                       /><span class="truncate">{{ shiftLabel(row.preset.shift) }}</span>
                     </div>
-                    <div class="text-muted-foreground flex items-center gap-1.5 truncate text-xs">
-                      <ng-icon
-                        name="lucideUserRound"
-                        class="size-3.5 shrink-0"
-                        aria-hidden="true"
-                      /><span class="truncate"
-                        >{{ row.position.name }} · {{ row.minimum }} necesarios</span
-                      >
+                    <div class="mt-1 space-y-0.5">
+                      @for (requirement of row.requirements; track requirement.id) {
+                        <div class="text-muted-foreground flex items-center gap-1.5 truncate text-xs">
+                          <ng-icon
+                            name="lucideUserRound"
+                            class="size-3.5 shrink-0"
+                            aria-hidden="true"
+                          /><span class="truncate"
+                            >{{ requirement.position.name }} · {{ requirement.minimum }} necesarios</span
+                          >
+                        </div>
+                      }
                     </div>
                   </th>
                   @for (day of days(); track day.isoDate) {
@@ -260,7 +264,7 @@
                           [preset]="row.preset"
                           [assigned]="assignmentsFor(row, day.isoDate)"
                           [date]="day.isoDate"
-                          [positionName]="row.position.name"
+                          [requiredPositionIds]="requiredPositionIds(row)"
                           [shiftLabel]="shiftName(row.preset.shift)"
                           (dropped)="moveEmployee($event, day.isoDate, row.preset)"
                           (removed)="remove($event, day.isoDate)"

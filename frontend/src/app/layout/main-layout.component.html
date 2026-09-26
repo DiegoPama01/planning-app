@@ -1,18 +1,14 @@
 <app-sidebar
-  [companies]="companies()"
-  [activeCompanyId]="activeCompanyId()"
   [companyName]="companyName()"
   [companyPlan]="companyPlan()"
+  [installations]="installations()"
+  [activeInstallationId]="activeInstallationId()"
+  [canManageCompany]="canManageCompany()"
   [user]="sidebarUser()"
-  (companySelected)="selectCompany($event)"
+  (installationSelected)="selectInstallation($event)"
   (logoutRequested)="logout()"
 >
-  <app-header
-    header
-    [installations]="installations()"
-    [activeInstallationId]="activeInstallationId()"
-    (installationSelected)="selectInstallation($event)"
-  />
+  <app-header header />
   <main hlmSidebarInset class="min-h-[calc(100svh-var(--header-height))]">
     <div class="flex min-h-full min-w-0 flex-1 flex-col p-4 md:p-6">
       <router-outlet />

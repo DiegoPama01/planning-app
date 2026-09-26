@@ -7,6 +7,32 @@ from .client import OpenFGAError
 from . import fga
 
 
+OPENFGA_PLANNING_RESOURCE_TYPES = {
+    "contract",
+    "employee_position",
+    "employee_zone",
+    "employee_availability",
+    "employee_availability_exception",
+    "employee_time_off",
+    "time_balance_entry",
+    "assignment",
+    "staff_requirement",
+    "planning",
+}
+
+OPENFGA_ACTION_RELATIONS = {
+    "view": "can_view",
+    "edit": "can_edit",
+    "approve": "can_approve",
+    "publish": "can_publish",
+}
+
+OPENFGA_PLANNING_ACTION_RELATIONS = {
+    "view": "can_view_planning",
+    "edit": "can_edit_planning",
+}
+
+
 def user_object(user) -> str:
     return f"user:{getattr(user, 'authentik_sub', None) or user.id}"
 
@@ -61,6 +87,57 @@ def can_manage_installation(user, installation) -> bool:
     # OpenFGA tuples are being provisioned for existing organizations.
     _check_fga(user=user_object(user), relation="can_manage", object=f"installation:{installation.id}")
     return True
+
+
+def can_access_planning_resource(user, *, resource_type: str, resource_id, action: str) -> bool:
+    """Check OpenFGA access for planning-owned domain entities.
+
+    Intended for the new workforce-planning entities whose authorization model
+    inherits from installation planning permissions while allowing a small set of
+    resource-specific actions (approve/publish). When OpenFGA is disabled, DRF
+    views should still scope querysets by organization before calling this.
+    """
+    if resource_type not in OPENFGA_PLANNING_RESOURCE_TYPES:
+        raise ValueError(f"Unsupported OpenFGA planning resource type: {resource_type}")
+    relation = OPENFGA_ACTION_RELATIONS.get(action)
+    if relation is None:
+        raise ValueError(f"Unsupported OpenFGA planning resource action: {action}")
+    if not settings.OPENFGA["ENABLED"]:
+        return True
+    return _check_fga(
+        user=user_object(user),
+        relation=relation,
+        object=f"{resource_type}:{resource_id}",
+    )
+
+
+def can_access_installation_planning(user, *, installation_id, action: str) -> bool:
+    relation = OPENFGA_PLANNING_ACTION_RELATIONS.get(action)
+    if relation is None:
+        raise ValueError(f"Unsupported OpenFGA installation planning action: {action}")
+    if not settings.OPENFGA["ENABLED"]:
+        return True
+    return _check_fga(
+        user=user_object(user),
+        relation=relation,
+        object=f"installation:{installation_id}",
+    )
+
+
+class OpenFGAPlanningResourcePermission(permissions.BasePermission):
+    message = "You do not have permission to access this planning resource."
+
+    def has_object_permission(self, request, view, obj):
+        resource_type = getattr(view, "openfga_resource_type", None)
+        if not resource_type:
+            return True
+        action = "view" if request.method in permissions.SAFE_METHODS else "edit"
+        return can_access_planning_resource(
+            request.user,
+            resource_type=resource_type,
+            resource_id=obj.id,
+            action=action,
+        )
 
 
 class InstallationPlanningPermission(permissions.BasePermission):

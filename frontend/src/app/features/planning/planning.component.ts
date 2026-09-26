@@ -11,7 +11,7 @@ import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
-import { toast } from 'ngx-sonner';
+import { AlertService } from '../../core/alerts/alert.service';
 import { EmployeesService } from '../employees/employees.service';
 import { PositionsService } from '../positions/positions.service';
 import { ShiftsService } from '../shifts/shifts.service';
@@ -20,7 +20,7 @@ import { Employee } from '../employees/employees.model';
 import { Position } from '../positions/positions.model';
 import { Shift } from '../shifts/shifts.model';
 import { Zone } from '../zones/zones.model';
-import { PlanningWeekResponse, PlanningWeekWritePayload, ZoneShiftPreset } from './planning.model';
+import type { EmployeeAvailability, EmployeeAvailabilityException, EmployeePosition, EmployeeTimeOff, EmployeeZone, PlanningWeekResponse, PlanningWeekWritePayload, ZoneShiftPreset } from './planning.model';
 import { PlanningService } from './planning.service';
 import { buildPlanningCsv, type PlanningExportRow } from './planning-export';
 import { PlanningEmployeeCardComponent } from './planning-employee-card.component';
@@ -42,6 +42,7 @@ export class PlanningComponent {
   private readonly zonesService = inject(ZonesService);
   private readonly shiftsService = inject(ShiftsService);
   private readonly planningService = inject(PlanningService);
+  private readonly alerts = inject(AlertService);
   private readonly document = inject(DOCUMENT);
 
   protected readonly selectedDate = signal(this.formatDate(new Date()));
@@ -81,7 +82,7 @@ export class PlanningComponent {
   protected readonly rows = computed<PlanningRow[]>(() => {
     const data = this.data();
     if (!data) return [];
-    return buildPlanningRows(data.positions, data.zones, this.presets(), this.week()?.requirements ?? [], { zone: this.zoneFilter(), shift: 'all', position: this.positionFilter() });
+    return buildPlanningRows(data.positions, data.zones, this.presets(), this.staffRequirements(), { zone: this.zoneFilter(), shift: 'all', position: this.positionFilter() });
   });
   protected readonly visibleEmployees = computed(() => {
     const query = this.employeeSearch().trim().toLocaleLowerCase();
@@ -91,6 +92,12 @@ export class PlanningComponent {
   protected readonly employeeById = computed(() => new Map((this.data()?.employees ?? []).map((employee) => [employee.id, employee])));
   protected readonly zoneById = computed(() => new Map((this.data()?.zones ?? []).map((zone) => [zone.id, zone])));
   protected readonly shiftById = computed(() => new Map((this.data()?.shifts ?? []).map((shift) => [shift.id, shift])));
+  protected readonly staffRequirements = computed(() => this.week()?.staff_requirements ?? this.week()?.requirements ?? []);
+  protected readonly employeePositionsByEmployee = computed(() => this.groupByEmployee(this.week()?.employee_positions ?? []));
+  protected readonly employeeZonesByEmployee = computed(() => this.groupByEmployee(this.week()?.employee_zones ?? []));
+  protected readonly employeeAvailabilitiesByEmployee = computed(() => this.groupByEmployee(this.week()?.employee_availabilities ?? []));
+  protected readonly timeOffByEmployee = computed(() => this.groupByEmployee(this.week()?.employee_time_offs ?? []));
+  protected readonly availabilityExceptionsByEmployee = computed(() => this.groupByEmployee(this.week()?.employee_availability_exceptions ?? []));
 
   constructor() { effect(() => { const week = this.week(); if (week) this.syncAssignments(week); }); }
 
@@ -100,17 +107,25 @@ export class PlanningComponent {
   protected updateDate(date: Date | null | undefined): void { if (date) this.selectedDate.set(this.formatDate(date)); }
   protected moveWeek(days: number): void { const date = new Date(this.weekStart()); date.setDate(date.getDate() + days); this.selectedDate.set(this.formatDate(date)); }
   protected employeeName(id: string): string { const employee = this.employeeById().get(id); return employee ? `${employee.first_name} ${employee.last_name}`.trim() : 'Unknown employee'; }
+  protected employeePositionId(employee: Employee): string { return this.primaryPositionId(employee); }
   protected positionName(id: string): string { return this.data()?.positions.find((position) => position.id === id)?.name ?? 'Unknown position'; }
   protected zoneName(id: string): string { return this.zoneById().get(id)?.name ?? 'Zone'; }
   protected zoneColor(id: string): string { return this.zoneById().get(id)?.color ?? 'currentColor'; }
   protected shiftName(id: string): string { return this.shiftById().get(id)?.name ?? 'Shift'; }
   protected shiftLabel(id: string): string { const shift = this.shiftById().get(id); return shift ? `${shift.name} ${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}` : 'Shift'; }
-  protected assignmentsFor(row: PlanningRow, date: string): Employee[] { return (this.data()?.employees ?? []).filter((employee) => { const assignment = this.assignments()[this.key(employee.id, date)]; return employee.position === row.position.id && assignment?.zoneId === row.preset.zone && assignment.shiftId === row.preset.shift; }); }
+  protected assignmentsFor(row: PlanningRow, date: string): Employee[] { return (this.data()?.employees ?? []).filter((employee) => { const assignment = this.assignments()[this.key(employee.id, date)]; return assignment?.zoneId === row.preset.zone && assignment.shiftId === row.preset.shift; }); }
   protected coverage(row: PlanningRow, date: string): number { return this.assignmentsFor(row, date).length; }
+  protected requiredPositionIds(row: PlanningRow): string[] { return row.requirements.map((requirement) => requirement.position.id); }
+  protected employeeCardPositionName(employee: Employee, row?: PlanningRow): string { const matchingPosition = row?.requirements.find((requirement) => this.employeePositionIds(employee).includes(requirement.position.id))?.position.id; return this.positionName(matchingPosition ?? this.primaryPositionId(employee)); }
   protected moveEmployee(event: PlanningDropEvent, date: string, preset: ZoneShiftPreset): void {
     const employeeId = event.employee.id;
     const employee = this.employeeById().get(employeeId);
-    if (!employee || !employee.allowed_zones.includes(preset.zone) || !employee.allowed_shifts.includes(preset.shift)) { toast.error('This employee cannot work this zone and shift.'); return; }
+    const row = this.rows().find((item) => item.preset.zone === preset.zone && item.preset.shift === preset.shift);
+    const validationError = this.assignmentValidationError(employee, row, date, preset);
+    if (validationError) {
+      this.alerts.error(validationError.message, { description: validationError.description });
+      return;
+    }
     if (event.source?.date === date && event.source.preset.zone === preset.zone && event.source.preset.shift === preset.shift) {
       this.assignments.update((state) => ({ ...state }));
       return;
@@ -133,8 +148,8 @@ export class PlanningComponent {
     this.hasPendingChanges.set(true);
     this.scheduleAutoSave();
   }
-  protected exportPlanning(): void { const data = this.data(); if (!data || this.isExporting()) return; this.isExporting.set(true); try { const rows: PlanningExportRow[] = data.employees.filter((employee) => employee.active).map((employee) => ({ employee: this.employeeName(employee.id), position: this.positionName(employee.position), cells: this.days().map((day) => { const assignment = this.assignments()[this.key(employee.id, day.isoDate)]; const shift = assignment ? this.shiftById().get(assignment.shiftId) : undefined; return { date: day.isoDate, day: day.label, zone: assignment ? this.zoneName(assignment.zoneId) : '', shift: shift?.name ?? '', startTime: shift?.start_time ?? '', endTime: shift?.end_time ?? '', note: assignment?.note ?? '' }; }) })); const blob = new Blob([`\ufeff${buildPlanningCsv(rows)}`], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = this.document.createElement('a'); link.href = url; link.download = `planning-${this.weekStartIso()}.csv`; link.click(); URL.revokeObjectURL(url); } finally { this.isExporting.set(false); } }
-  private syncAssignments(week: PlanningWeekResponse): void { const next: Record<string, Assignment> = {}; for (const assignment of week.assignments) next[this.key(assignment.employee, assignment.work_date)] = { zoneId: assignment.zone, shiftId: assignment.shift, note: assignment.note }; this.assignments.set(next); this.hasPendingChanges.set(false); }
+  protected exportPlanning(): void { const data = this.data(); if (!data || this.isExporting()) return; this.isExporting.set(true); try { const rows: PlanningExportRow[] = data.employees.filter((employee) => employee.active).map((employee) => ({ employee: this.employeeName(employee.id), position: this.positionName(this.primaryPositionId(employee)), cells: this.days().map((day) => { const assignment = this.assignments()[this.key(employee.id, day.isoDate)]; const shift = assignment ? this.shiftById().get(assignment.shiftId) : undefined; return { date: day.isoDate, day: day.label, zone: assignment ? this.zoneName(assignment.zoneId) : '', shift: shift?.name ?? '', startTime: shift?.start_time ?? '', endTime: shift?.end_time ?? '', note: assignment?.note ?? '' }; }) })); const blob = new Blob([`\ufeff${buildPlanningCsv(rows)}`], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = this.document.createElement('a'); link.href = url; link.download = `planning-${this.weekStartIso()}.csv`; link.click(); URL.revokeObjectURL(url); } finally { this.isExporting.set(false); } }
+  private syncAssignments(week: PlanningWeekResponse): void { const next: Record<string, Assignment> = {}; for (const assignment of week.assignments) next[this.key(assignment.employee, assignment.work_date)] = { zoneId: assignment.zone, shiftId: assignment.shift, note: assignment.note ?? '' }; this.assignments.set(next); this.hasPendingChanges.set(false); }
   private writePayload(): PlanningWeekWritePayload['assignments'] { return Object.entries(this.assignments()).map(([key, assignment]) => { const [employee, work_date] = key.split(':'); return { employee: employee ?? '', work_date: work_date ?? '', zone: assignment.zoneId, shift: assignment.shiftId, note: assignment.note }; }); }
   private scheduleAutoSave(): void {
     this.autoSaveQueued = true;
@@ -156,13 +171,52 @@ export class PlanningComponent {
       if (revision === this.assignmentRevision) this.syncAssignments(response);
     } catch {
       this.saveError.set('Could not save planning automatically. Review the assignments and try again.');
-      toast.error('Could not save planning automatically.');
+      this.alerts.error('Could not save planning automatically.');
     } finally {
       this.isSaving.set(false);
       if (this.autoSaveQueued) this.scheduleAutoSave();
     }
   }
   private key(employee: string, date: string): string { return `${employee}:${date.slice(0, 10)}`; }
+  private primaryPositionId(employee: Employee): string { const employeePositions = this.employeePositionRows(employee); return employeePositions.find((item) => item.active !== false && item.primary)?.position ?? employeePositions.find((item) => item.active !== false)?.position ?? employee.position; }
+  private employeePositionIds(employee: Employee): string[] { const employeePositions = this.employeePositionRows(employee); const positionIds = employeePositions.filter((item) => item.active !== false).map((item) => item.position); return positionIds.length > 0 ? positionIds : [employee.position].filter(Boolean); }
+  private allowedZoneIds(employee: Employee): string[] { const employeeZones = this.employeeZoneRows(employee); const zoneIds = employeeZones.filter((item) => item.active !== false).map((item) => item.zone); return zoneIds.length > 0 ? zoneIds : employee.allowed_zones; }
+  private canWorkInZone(employee: Employee, zoneId: string): boolean { return employee.all_zones === true || this.allowedZoneIds(employee).includes(zoneId); }
+  private canCoverRequiredPosition(employee: Employee, row: PlanningRow): boolean { const positionIds = this.employeePositionIds(employee); return row.requirements.some((requirement) => positionIds.includes(requirement.position.id)); }
+  private assignmentValidationError(employee: Employee | undefined, row: PlanningRow | undefined, date: string, preset: ZoneShiftPreset): { message: string; description?: string } | null {
+    if (!employee) return { message: 'No se pudo identificar al empleado arrastrado.' };
+    if (!preset.zone || !preset.shift) return { message: 'El destino de planificación está incompleto.', description: 'Falta la zona o el turno del cuadrante.' };
+    if (!this.zoneById().has(preset.zone)) return { message: 'La zona del destino ya no existe o no está cargada.' };
+    if (!this.shiftById().has(preset.shift)) return { message: 'El turno del destino ya no existe o no está cargado.' };
+    if (!this.canWorkInZone(employee, preset.zone)) return { message: 'Zona no permitida para este empleado.', description: `${this.employeeName(employee.id)} no tiene permiso para trabajar en ${this.zoneName(preset.zone)}.` };
+    if (row && !this.canCoverRequiredPosition(employee, row)) return { message: 'Puesto no compatible.', description: 'El empleado no tiene ninguno de los puestos requeridos para este turno.' };
+    if (!this.isAvailableForShift(employee, date, preset.shift)) return { message: 'El empleado no está disponible para este turno.', description: 'Revisa su disponibilidad semanal para esa fecha y horario.' };
+    if (this.hasApprovedTimeOff(employee.id, date)) return { message: 'El empleado tiene una ausencia aprobada ese día.' };
+    if (this.hasUnavailableException(employee.id, date, preset.shift)) return { message: 'El empleado está marcado como no disponible para esa fecha o turno.' };
+    return null;
+  }
+  private groupByEmployee<T extends { employee: string }>(items: T[]): Map<string, T[]> { const grouped = new Map<string, T[]>(); for (const item of items) grouped.set(item.employee, [...(grouped.get(item.employee) ?? []), item]); return grouped; }
+  private employeePositionRows(employee: Employee): EmployeePosition[] { const weekRows = this.employeePositionsByEmployee().get(employee.id) ?? []; return weekRows.length > 0 ? weekRows : employee.employee_positions ?? employee.positions ?? []; }
+  private employeeZoneRows(employee: Employee): EmployeeZone[] { const weekRows = this.employeeZonesByEmployee().get(employee.id) ?? []; return weekRows.length > 0 ? weekRows : employee.employee_zones ?? employee.zones ?? []; }
+  private employeeAvailabilityRows(employee: Employee): EmployeeAvailability[] { const weekRows = this.employeeAvailabilitiesByEmployee().get(employee.id) ?? []; return weekRows.length > 0 ? weekRows : employee.availabilities ?? []; }
+  private hasApprovedTimeOff(employeeId: string, date: string): boolean { return (this.timeOffByEmployee().get(employeeId) ?? []).some((item: EmployeeTimeOff) => item.status === 'approved' && item.start_date <= date && item.end_date >= date); }
+  private hasUnavailableException(employeeId: string, date: string, shiftId: string): boolean { return (this.availabilityExceptionsByEmployee().get(employeeId) ?? []).some((item: EmployeeAvailabilityException) => (item.work_date ?? item.date) === date && (item.status === 'unavailable' || item.available === false) && (!item.shift || item.shift === shiftId)); }
+  private isAvailableForShift(employee: Employee, date: string, shiftId: string): boolean {
+    if (employee.availability_unrestricted === true) return true;
+    const day = this.mondayFirstDayOfWeek(date);
+    const rows = this.employeeAvailabilityRows(employee).filter((availability) => (availability.day_of_week ?? availability.weekday) === day);
+    if (rows.length === 0) return employee.availability_unrestricted !== false;
+    const availableRows = rows.filter((availability) => availability.available !== false && availability.status !== 'unavailable');
+    if (availableRows.length === 0) return false;
+    const shift = this.shiftById().get(shiftId);
+    if (!shift) return true;
+    return availableRows.some((availability) => this.availabilityCoversShift(availability, shift));
+  }
+  private availabilityCoversShift(availability: EmployeeAvailability, shift: Shift): boolean {
+    if (!availability.start_time || !availability.end_time) return true;
+    return availability.start_time.slice(0, 5) <= shift.start_time.slice(0, 5) && availability.end_time.slice(0, 5) >= shift.end_time.slice(0, 5);
+  }
+  private mondayFirstDayOfWeek(date: string): number { return (new Date(`${date}T00:00:00`).getDay() + 6) % 7; }
   private startOfWeek(date: Date): Date { const result = new Date(date); const day = result.getDay(); result.setDate(result.getDate() + (day === 0 ? -6 : 1 - day)); result.setHours(0, 0, 0, 0); return result; }
   private formatDate(date: Date): string { return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`; }
   private formatDay(date: Date): string { return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
