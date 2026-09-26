@@ -3,21 +3,23 @@ model
 
 type user
 
-type project
+type company
   relations
-    define developer: [user]
+    define owner: [user]
+    define admin: [user]
+    define member: [user]
+
+    define can_create_installation: owner or admin
+    define can_manage_company: owner or admin
 
 type installation
   relations
-    define project: [project]
+    define company: [company]
+
+    define owner: [user]
     define admin: [user]
-    define member: [user]   
+    define manager: [user]
 
-    define can_access: admin or member or developer from project
-
-    define can_view_planning: admin or member
-    define can_create_planning: admin
-    define can_edit_planning: admin
-    define can_delete_planning: admin
-
-    define can_view_logs: developer from project
+    define can_manage: owner or admin
+    define can_view_planning: owner or admin or manager
+    define can_edit_planning: owner or admin or manager

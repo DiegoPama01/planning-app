@@ -1,8 +1,9 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
-from organizations.models import Company
+from organizations.models import Company, Installation
 
 
 class Position(models.Model):
@@ -11,24 +12,40 @@ class Position(models.Model):
         default=uuid.uuid4,
         editable=False,
     )
-    company = models.ForeignKey(
-        Company,
+    installation = models.ForeignKey(
+        Installation,
         on_delete=models.CASCADE,
         related_name="positions",
     )
     name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     color = models.CharField(
         max_length=7,
         blank=True,
+        null=True,
     )
+    sort_order = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        ordering = ["sort_order", "name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["company", "name"],
-                name="unique_position_name_per_company",
+                fields=["installation", "name"],
+                name="unique_position_name_per_installation",
             ),
         ]
+
+    @property
+    def company(self):
+        return self.installation.company
+
+    @property
+    def company_id(self):
+        return self.installation.company_id
 
     @property
     def staffing_rules(self):
@@ -44,16 +61,23 @@ class Zone(models.Model):
         default=uuid.uuid4,
         editable=False,
     )
-    company = models.ForeignKey(
-        Company,
+    installation = models.ForeignKey(
+        Installation,
         on_delete=models.CASCADE,
         related_name="zones",
     )
     name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     color = models.CharField(
         max_length=7,
         blank=True,
+        null=True,
     )
+    sort_order = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     configured_shifts = models.ManyToManyField(
         "Shift",
         through="ZoneShiftPreset",
@@ -62,12 +86,21 @@ class Zone(models.Model):
     )
 
     class Meta:
+        ordering = ["sort_order", "name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["company", "name"],
-                name="unique_zone_name_per_company",
+                fields=["installation", "name"],
+                name="unique_zone_name_per_installation",
             ),
         ]
+
+    @property
+    def company(self):
+        return self.installation.company
+
+    @property
+    def company_id(self):
+        return self.installation.company_id
 
     def __str__(self):
         return self.name
@@ -79,26 +112,42 @@ class Shift(models.Model):
         default=uuid.uuid4,
         editable=False,
     )
-    company = models.ForeignKey(
-        Company,
+    installation = models.ForeignKey(
+        Installation,
         on_delete=models.CASCADE,
         related_name="shifts",
     )
     name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, blank=True, null=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
+    break_minutes = models.PositiveIntegerField(default=0)
     color = models.CharField(
         max_length=7,
         blank=True,
+        null=True,
     )
+    sort_order = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        ordering = ["sort_order", "start_time", "name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["company", "name"],
-                name="unique_shift_name_per_company",
+                fields=["installation", "name"],
+                name="unique_shift_name_per_installation",
             ),
         ]
+
+    @property
+    def company(self):
+        return self.installation.company
+
+    @property
+    def company_id(self):
+        return self.installation.company_id
 
     def __str__(self):
         return self.name
@@ -175,22 +224,40 @@ class Employee(models.Model):
         default=uuid.uuid4,
         editable=False,
     )
-    company = models.ForeignKey(
-        Company,
+    installation = models.ForeignKey(
+        Installation,
         on_delete=models.CASCADE,
         related_name="employees",
     )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="employees",
+        blank=True,
+        null=True,
+    )
+    employee_code = models.CharField(max_length=50, blank=True, null=True)
     position = models.ForeignKey(
         Position,
         on_delete=models.PROTECT,
         related_name="employees",
+        blank=True,
+        null=True,
     )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(
         max_length=150,
         blank=True,
     )
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    hire_date = models.DateField(blank=True, null=True)
+    termination_date = models.DateField(blank=True, null=True)
+    color = models.CharField(max_length=7, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
     active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     allowed_zones = models.ManyToManyField(
         Zone,
@@ -202,6 +269,17 @@ class Employee(models.Model):
         related_name="employees",
         blank=True,
     )
+
+    class Meta:
+        ordering = ["first_name", "last_name"]
+
+    @property
+    def company(self):
+        return self.installation.company
+
+    @property
+    def company_id(self):
+        return self.installation.company_id
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()

@@ -3,78 +3,76 @@ name: Cuadrant authorization model
 model_file: ./model.fga
 
 tuples:
-  - user: project:cuadrant
-    relation: project
-    object: installation:hotel-one
-
-  - user: project:cuadrant
-    relation: project
-    object: installation:hotel-two
+  - user: user:alice
+    relation: owner
+    object: company:hotel-group
 
   - user: user:alice
     relation: admin
+    object: company:restaurant-group
+
+  - user: company:hotel-group
+    relation: company
     object: installation:hotel-one
+
+  - user: company:restaurant-group
+    relation: company
+    object: installation:restaurant-one
 
   - user: user:alice
-    relation: member
-    object: installation:hotel-two
-
-  - user: user:bob
-    relation: member
+    relation: owner
     object: installation:hotel-one
 
-  - user: user:diego
-    relation: developer
-    object: project:cuadrant
+  - user: user:bob
+    relation: manager
+    object: installation:hotel-one
 
 tests:
-  - name: installation_admin
+  - name: company_owner
+    check:
+      - user: user:alice
+        object: company:hotel-group
+        assertions:
+          can_create_installation: true
+          can_manage_company: true
+
+  - name: company_admin
+    check:
+      - user: user:alice
+        object: company:restaurant-group
+        assertions:
+          can_create_installation: true
+          can_manage_company: true
+
+  - name: installation_owner
     check:
       - user: user:alice
         object: installation:hotel-one
         assertions:
-          can_access: true
+          can_manage: true
           can_view_planning: true
-          can_create_planning: true
           can_edit_planning: true
-          can_delete_planning: true
-          can_view_logs: false
 
-  - name: installation_member
+  - name: installation_manager
     check:
-      - user: user:alice
-        object: installation:hotel-two
-        assertions:
-          can_access: true
-          can_view_planning: true
-          can_create_planning: false
-          can_edit_planning: false
-          can_delete_planning: false
-          can_view_logs: false
-
-  - name: developer_permissions
-    check:
-      - user: user:diego
+      - user: user:bob
         object: installation:hotel-one
         assertions:
-          can_access: true
-          can_view_planning: false
-          can_edit_planning: false
-          can_view_logs: true
-
-      - user: user:diego
-        object: installation:hotel-two
-        assertions:
-          can_access: true
-          can_view_planning: false
-          can_view_logs: true
+          can_manage: false
+          can_view_planning: true
+          can_edit_planning: true
 
   - name: tenant_isolation
     check:
       - user: user:bob
-        object: installation:hotel-two
+        object: installation:restaurant-one
         assertions:
-          can_access: false
+          can_manage: false
           can_view_planning: false
           can_edit_planning: false
-          can_view_logs: false
+
+      - user: user:bob
+        object: company:restaurant-group
+        assertions:
+          can_create_installation: false
+          can_manage_company: false

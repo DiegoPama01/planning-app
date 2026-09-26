@@ -2,6 +2,24 @@
   <div hlmCardContent class="pt-6">
     <form [formRoot]="shiftForm">
       <hlm-field-group class="space-y-6">
+        @if (installations().length > 0) {
+          <hlm-field>
+            <label hlmFieldLabel for="shift-installation-trigger">Installation</label>
+            <hlm-select [value]="model().installation || null" [itemToString]="installationToLabel" (valueChange)="updateInstallation($event ?? '')">
+              <hlm-select-trigger id="shift-installation-trigger" class="w-full">
+                <hlm-select-value placeholder="Use default installation" />
+              </hlm-select-trigger>
+              <hlm-select-content *hlmSelectPortal>
+                <hlm-select-group>
+                  @for (installation of installations(); track installation.id) {
+                    <hlm-select-item [value]="installation.id">{{ installation.name }}</hlm-select-item>
+                  }
+                </hlm-select-group>
+              </hlm-select-content>
+            </hlm-select>
+          </hlm-field>
+        }
+
         <hlm-field>
           <label hlmFieldLabel for="shift-name">Name</label>
           <input hlmInput id="shift-name" type="text" placeholder="Morning" [formField]="shiftForm.name" />
@@ -11,6 +29,18 @@
         </hlm-field>
 
         <div class="grid gap-6 md:grid-cols-2">
+          <hlm-field>
+            <label hlmFieldLabel for="shift-code">Code</label>
+            <input hlmInput id="shift-code" type="text" placeholder="AM" [formField]="shiftForm.code" />
+          </hlm-field>
+
+          <hlm-field>
+            <label hlmFieldLabel for="shift-sort-order">Sort order</label>
+            <input hlmInput id="shift-sort-order" type="number" [formField]="shiftForm.sort_order" />
+          </hlm-field>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-3">
           <hlm-field>
             <label hlmFieldLabel for="shift-start-time">Start time</label>
              <input hlmInput id="shift-start-time" type="time" [formField]="shiftForm.start_time" />
@@ -26,6 +56,11 @@
               <hlm-field-error [validator]="error.kind">{{ error.message }}</hlm-field-error>
             }
           </hlm-field>
+
+          <hlm-field>
+            <label hlmFieldLabel for="shift-break-minutes">Break minutes</label>
+            <input hlmInput id="shift-break-minutes" type="number" [formField]="shiftForm.break_minutes" />
+          </hlm-field>
         </div>
 
         <hlm-field>
@@ -39,12 +74,20 @@
           }
         </hlm-field>
 
+        <div class="flex items-center gap-3 rounded-lg px-4 py-3">
+          <div>
+            <p class="text-sm font-medium">Active shift</p>
+            <p class="text-muted-foreground text-xs">Available for zones and planning</p>
+          </div>
+          <hlm-switch [checked]="model().active" (checkedChange)="updateActive($event)" />
+        </div>
+
         @if (formError(); as errorMessage) {
           <p class="text-sm font-medium text-red-600" aria-live="polite">{{ errorMessage }}</p>
         }
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button hlmBtn type="button" variant="outline" (click)="cancel()" [disabled]="shiftForm().submitting()">Cancel</button>
+          <button hlmBtn type="button" variant="outline" (click)="cancel()">Cancel</button>
           <button hlmBtn type="submit" [disabled]="shiftForm().submitting()">{{ submitLabel() }}</button>
         </div>
       </hlm-field-group>

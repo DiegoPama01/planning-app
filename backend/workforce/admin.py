@@ -5,20 +5,20 @@ from .models import Employee, Position, Shift, Zone
 
 @admin.register(Position)
 class PositionAdmin(admin.ModelAdmin):
-    list_display = ("name", "company")
-    list_filter = ("company",)
+    list_display = ("name", "installation", "code", "sort_order", "active")
+    list_filter = ("installation__company", "installation", "active")
 
 
 @admin.register(Zone)
 class ZoneAdmin(admin.ModelAdmin):
-    list_display = ("name", "company")
-    list_filter = ("company",)
+    list_display = ("name", "installation", "code", "sort_order", "active")
+    list_filter = ("installation__company", "installation", "active")
 
 
 @admin.register(Shift)
 class ShiftAdmin(admin.ModelAdmin):
-    list_display = ("name", "company", "start_time", "end_time")
-    list_filter = ("company",)
+    list_display = ("name", "installation", "code", "start_time", "end_time", "break_minutes", "active")
+    list_filter = ("installation__company", "installation", "active")
 
 
 @admin.register(Employee)
@@ -26,10 +26,11 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_display = (
         "first_name",
         "last_name",
+        "installation",
+        "employee_code",
         "position",
-        "company",
         "active",
     )
-    list_filter = ("company", "position", "active")
-    search_fields = ("first_name", "last_name")
+    list_filter = ("installation__company", "installation", "position", "active")
+    search_fields = ("first_name", "last_name", "employee_code", "email")
     filter_horizontal = ("allowed_zones", "allowed_shifts")

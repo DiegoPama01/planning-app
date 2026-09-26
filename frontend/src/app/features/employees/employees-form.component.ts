@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, effect, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -8,6 +9,8 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { HlmTableImports } from '@spartan-ng/helm/table';
+import { InstallationOption } from '../../core/company/installation.model';
+import { randomFormColor } from '../../shared/color-utils';
 import { Position } from '../positions/positions.model';
 import { Shift } from '../shifts/shifts.model';
 import { Zone } from '../zones/zones.model';
@@ -31,23 +34,41 @@ import { EmployeeUpsertPayload } from './employees.model';
   templateUrl: './employees-form.component.html',
 })
 export class EmployeesFormComponent {
+  private readonly router = inject(Router);
+
   readonly initialValue = input.required<EmployeeUpsertPayload>();
   readonly positions = input<Position[]>([]);
   readonly zones = input<Zone[]>([]);
   readonly shifts = input<Shift[]>([]);
+  readonly installations = input<InstallationOption[]>([]);
   readonly submitLabel = input('Save employee');
   readonly formError = input<string | null>(null);
   readonly submitForm = input.required<(value: EmployeeUpsertPayload) => Promise<void>>();
-  readonly cancel = input.required<() => void>();
+  readonly cancelLink = input.required<string>();
+
+  protected async cancel(): Promise<void> {
+    await this.router.navigateByUrl(this.cancelLink());
+  }
 
   protected readonly model = signal<EmployeeUpsertPayload>({
+    employee_code: '',
     first_name: '',
     last_name: '',
+    email: '',
+    phone: '',
+    hire_date: '',
+    termination_date: '',
+    color: randomFormColor(),
+    notes: '',
     active: true,
     position: '',
     allowed_zones: [],
     allowed_shifts: [],
   });
+
+  protected readonly filteredPositions = computed(() => this.filterByInstallation(this.positions()));
+  protected readonly filteredZones = computed(() => this.filterByInstallation(this.zones()));
+  protected readonly filteredShifts = computed(() => this.filterByInstallation(this.shifts()));
 
   constructor() {
     effect(() => {
@@ -79,14 +100,22 @@ export class EmployeesFormComponent {
     return this.positions().find((position) => position.id === value)?.name ?? '';
   };
 
+  protected readonly installationToLabel = (value: string | null | undefined) => {
+    if (!value) {
+      return '';
+    }
+
+    return this.installations().find((installation) => installation.id === value)?.name ?? value;
+  };
+
   protected areAllZonesSelected(): boolean {
-    const zones = this.zones();
+    const zones = this.filteredZones();
 
     return zones.length > 0 && zones.every((zone) => this.model().allowed_zones.includes(zone.id));
   }
 
   protected areAllShiftsSelected(): boolean {
-    const shifts = this.shifts();
+    const shifts = this.filteredShifts();
 
     return shifts.length > 0 && shifts.every((shift) => this.model().allowed_shifts.includes(shift.id));
   }
@@ -95,6 +124,16 @@ export class EmployeesFormComponent {
     this.model.update((value) => ({
       ...value,
       position: positionId,
+    }));
+  }
+
+  protected updateInstallation(installationId: string): void {
+    this.model.update((value) => ({
+      ...value,
+      installation: installationId || undefined,
+      position: this.isSameInstallation(value.position, installationId) ? value.position : '',
+      allowed_zones: value.allowed_zones.filter((zoneId) => this.isSameInstallation(zoneId, installationId)),
+      allowed_shifts: value.allowed_shifts.filter((shiftId) => this.isSameInstallation(shiftId, installationId)),
     }));
   }
 
@@ -117,7 +156,7 @@ export class EmployeesFormComponent {
   protected toggleAllZones(checked: boolean): void {
     this.model.update((value) => ({
       ...value,
-      allowed_zones: checked ? this.zones().map((zone) => zone.id) : [],
+      allowed_zones: checked ? this.filteredZones().map((zone) => zone.id) : [],
     }));
   }
 
@@ -133,7 +172,27 @@ export class EmployeesFormComponent {
   protected toggleAllShifts(checked: boolean): void {
     this.model.update((value) => ({
       ...value,
-      allowed_shifts: checked ? this.shifts().map((shift) => shift.id) : [],
+      allowed_shifts: checked ? this.filteredShifts().map((shift) => shift.id) : [],
     }));
+  }
+
+  private filterByInstallation<T extends { installation?: string | null }>(items: T[]): T[] {
+    const installationId = this.model().installation;
+
+    if (!installationId) {
+      return items;
+    }
+
+    return items.filter((item) => item.installation === installationId);
+  }
+
+  private isSameInstallation(resourceId: string | null | undefined, installationId = this.model().installation): boolean {
+    if (!installationId || !resourceId) {
+      return true;
+    }
+
+    const resource = [...this.positions(), ...this.zones(), ...this.shifts()].find((item) => item.id === resourceId);
+
+    return resource?.installation === installationId;
   }
 }

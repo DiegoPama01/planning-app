@@ -16,8 +16,9 @@
       [initialValue]="initialValue()"
       [submitLabel]="isEditMode ? 'Save changes' : 'Create shift'"
       [formError]="formError()"
+      [installations]="installations()"
       [submitForm]="saveShift.bind(this)"
-        [cancel]="goBack.bind(this)"
+      cancelLink="/settings/shifts"
     />
   }
 </section>

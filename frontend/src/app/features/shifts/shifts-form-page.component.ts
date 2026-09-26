@@ -2,6 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { randomFormColor } from '../../shared/color-utils';
+import { CompanyService } from '../../core/company/company.service';
+import { collectInstallationOptions } from '../../core/company/installation-utils';
+import { InstallationOption } from '../../core/company/installation.model';
+import { InstallationsService } from '../../core/company/installations.service';
 import { ShiftsFormComponent } from './shifts-form.component';
 import { ShiftUpsertPayload } from './shifts.model';
 import { ShiftsService } from './shifts.service';
@@ -16,10 +20,15 @@ export class ShiftsFormPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly shiftsService = inject(ShiftsService);
+  private readonly companyService = inject(CompanyService);
+  private readonly installationsService = inject(InstallationsService);
 
   private readonly shiftId = this.route.snapshot.paramMap.get('id');
   protected readonly isEditMode = this.shiftId !== null;
   protected readonly formError = signal<string | null>(null);
+
+  protected readonly shiftsResource = resource({ loader: async () => firstValueFrom(this.shiftsService.list()) });
+  protected readonly installationsResource = resource({ loader: async () => firstValueFrom(this.installationsService.listForActiveCompany()) });
 
   protected readonly shiftResource = resource({
     loader: async () => {
@@ -37,19 +46,36 @@ export class ShiftsFormPageComponent {
     if (!shift) {
       return {
         name: '',
+        installation: this.companyService.getActiveInstallationId() ?? undefined,
+        code: '',
         start_time: '',
         end_time: '',
+        break_minutes: 0,
         color: randomFormColor(),
+        sort_order: 0,
+        active: true,
       };
     }
 
     return {
+      installation: shift.installation ?? undefined,
       name: shift.name,
+      code: shift.code ?? '',
       start_time: shift.start_time,
       end_time: shift.end_time,
+      break_minutes: shift.break_minutes ?? 0,
       color: shift.color,
+      sort_order: shift.sort_order ?? 0,
+      active: shift.active ?? true,
     };
   });
+
+  protected readonly installations = computed<InstallationOption[]>(() =>
+    collectInstallationOptions([
+      ...(this.shiftsResource.value() ?? []),
+      ...(this.shiftResource.value() ? [this.shiftResource.value()!] : []),
+    ], this.installationsResource.value() ?? []),
+  );
 
   protected async saveShift(payload: ShiftUpsertPayload): Promise<void> {
     this.formError.set(null);
@@ -67,7 +93,4 @@ export class ShiftsFormPageComponent {
     }
   }
 
-  protected async goBack(): Promise<void> {
-    await this.router.navigate(['/settings/shifts']);
-  }
 }

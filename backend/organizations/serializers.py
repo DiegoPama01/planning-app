@@ -1,14 +1,52 @@
 from rest_framework import serializers
 
 from workforce.models import Position, Shift, Zone, ZoneShiftPositionRequirement, ZoneShiftPreset
-from organizations.models import Company
+from organizations.models import Company, Installation
+
+
+class InstallationInputSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=150, required=False)
+    code = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
+    address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    timezone = serializers.CharField(max_length=64, required=False, allow_blank=True, allow_null=True)
+    active = serializers.BooleanField(required=False, default=True)
+
+
+class CompanySerializer(serializers.ModelSerializer):
+    initial_installation = InstallationInputSerializer(write_only=True, required=False)
+
+    class Meta:
+        model = Company
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "legal_name",
+            "tax_id",
+            "timezone",
+            "active",
+            "created_at",
+            "updated_at",
+            "initial_installation",
+        )
+        read_only_fields = ("id", "slug", "created_at", "updated_at")
 
 
 class InstallationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Company
-        fields = ("id", "name", "slug", "created_at")
-        read_only_fields = ("id", "slug", "created_at")
+        model = Installation
+        fields = (
+            "id",
+            "company",
+            "name",
+            "code",
+            "address",
+            "timezone",
+            "active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "company", "created_at", "updated_at")
 
 
 class ZoneShiftPositionRequirementInputSerializer(serializers.Serializer):
@@ -23,14 +61,30 @@ class ZoneShiftPresetInputSerializer(serializers.Serializer):
 
 class ZoneSerializer(serializers.ModelSerializer):
     shift_presets = ZoneShiftPresetInputSerializer(many=True, required=False, write_only=True)
+    installation = serializers.PrimaryKeyRelatedField(queryset=Installation.objects.none(), required=False)
+
     class Meta:
         model = Zone
         fields = (
             "id",
+            "installation",
             "name",
-            "color", "shift_presets",
+            "code",
+            "description",
+            "color",
+            "sort_order",
+            "active",
+            "created_at",
+            "updated_at",
+            "shift_presets",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        company = self.context.get("company")
+        if company:
+            self.fields["installation"].queryset = Installation.objects.filter(company=company)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -66,8 +120,10 @@ class ZoneSerializer(serializers.ModelSerializer):
         ZoneShiftPreset.objects.filter(company=company, zone=zone).update(active=False)
         for item in shift_presets:
             shift = serializers.PrimaryKeyRelatedField(
-                queryset=Shift.objects.filter(company=company),
+                queryset=Shift.objects.filter(installation__company=company),
             ).to_internal_value(item["shift"])
+            if shift.installation_id != zone.installation_id:
+                raise serializers.ValidationError("All shifts must belong to the zone installation.")
             preset, _ = ZoneShiftPreset.objects.update_or_create(
                 company=company,
                 zone=zone,
@@ -80,8 +136,8 @@ class ZoneSerializer(serializers.ModelSerializer):
             ).delete()
             for position_item in item.get("positions", []):
                 position = position_item["position"]
-                if not Position.objects.filter(id=position, company=company).exists():
-                    raise serializers.ValidationError("All positions must belong to the active company.")
+                if not Position.objects.filter(id=position, installation=zone.installation).exists():
+                    raise serializers.ValidationError("All positions must belong to the zone installation.")
                 ZoneShiftPositionRequirement.objects.create(
                     company=company,
                     zone_shift_preset=preset,
@@ -91,13 +147,28 @@ class ZoneSerializer(serializers.ModelSerializer):
 
 
 class ShiftSerializer(serializers.ModelSerializer):
+    installation = serializers.PrimaryKeyRelatedField(queryset=Installation.objects.none(), required=False)
+
     class Meta:
         model = Shift
         fields = (
             "id",
+            "installation",
             "name",
+            "code",
             "start_time",
             "end_time",
+            "break_minutes",
             "color",
+            "sort_order",
+            "active",
+            "created_at",
+            "updated_at",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        company = self.context.get("company")
+        if company:
+            self.fields["installation"].queryset = Installation.objects.filter(company=company)

@@ -57,20 +57,41 @@ class OpenFGAClient:
         # The user becomes known when an installation tuple references user:{sub}.
         return None
 
-    def provision_installation(self, *, installation_id: UUID, user_sub: str) -> None:
-        installation = f"installation:{installation_id}"
-        for tuple_key in (
-            TupleKey(
-                user=self.config["PROJECT_OBJECT"],
-                relation="project",
-                object=installation,
-            ),
+    def provision_company(self, *, company_id: UUID, user_sub: str, relation: str = "owner") -> None:
+        self._write_if_missing(
             TupleKey(
                 user=f"user:{user_sub}",
-                relation="admin",
+                relation=relation,
+                object=f"company:{company_id}",
+            )
+        )
+
+    def provision_installation(
+        self,
+        *,
+        installation_id: UUID,
+        user_sub: str,
+        company_id: UUID | None = None,
+        relation: str = "owner",
+    ) -> None:
+        installation = f"installation:{installation_id}"
+        tuples = []
+        if company_id:
+            tuples.append(
+                TupleKey(
+                    user=f"company:{company_id}",
+                    relation="company",
+                    object=installation,
+                )
+            )
+        tuples.append(
+            TupleKey(
+                user=f"user:{user_sub}",
+                relation=relation,
                 object=installation,
-            ),
-        ):
+            )
+        )
+        for tuple_key in tuples:
             self._write_if_missing(tuple_key)
 
     def _write_if_missing(self, tuple_key: TupleKey) -> None:

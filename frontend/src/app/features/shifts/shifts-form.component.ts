@@ -1,9 +1,13 @@
-import { ChangeDetectionStrategy, Component, effect, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { InstallationOption } from '../../core/company/installation.model';
 import { randomFormColor } from '../../shared/color-utils';
 import { ShiftUpsertPayload } from './shifts.model';
 
@@ -16,22 +20,34 @@ import { ShiftUpsertPayload } from './shifts.model';
     HlmCardImports,
     HlmFieldImports,
     HlmInputImports,
+    HlmSelectImports,
+    HlmSwitchImports,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shifts-form.component.html',
 })
 export class ShiftsFormComponent {
+  private readonly router = inject(Router);
   readonly initialValue = input.required<ShiftUpsertPayload>();
   readonly submitLabel = input('Save shift');
   readonly formError = input<string | null>(null);
+  readonly installations = input<InstallationOption[]>([]);
   readonly submitForm = input.required<(value: ShiftUpsertPayload) => Promise<void>>();
-  readonly cancel = input.required<() => void>();
+  readonly cancelLink = input.required<string>();
+
+  protected async cancel(): Promise<void> {
+    await this.router.navigateByUrl(this.cancelLink());
+  }
 
   protected readonly model = signal<ShiftUpsertPayload>({
     name: '',
+    code: '',
     start_time: '',
     end_time: '',
+    break_minutes: 0,
     color: randomFormColor(),
+    sort_order: 0,
+    active: true,
   });
 
   constructor() {
@@ -56,4 +72,20 @@ export class ShiftsFormComponent {
       },
     },
   );
+
+  protected readonly installationToLabel = (value: string | null | undefined) => {
+    if (!value) {
+      return '';
+    }
+
+    return this.installations().find((installation) => installation.id === value)?.name ?? value;
+  };
+
+  protected updateInstallation(installationId: string): void {
+    this.model.update((value) => ({ ...value, installation: installationId || undefined }));
+  }
+
+  protected updateActive(active: boolean): void {
+    this.model.update((value) => ({ ...value, active }));
+  }
 }

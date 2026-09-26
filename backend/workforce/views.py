@@ -6,7 +6,7 @@ from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from organizations.models import Company
+from organizations.models import Company, Installation
 from authorization.permissions import InstallationPlanningPermission
 from .models import Employee, PlanningAssignment, Position, StaffingRequirement, ZoneShiftPreset
 from .serializers import (
@@ -33,6 +33,15 @@ class CompanyScopedViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.get_company())
+
+
+def get_default_installation(company):
+    return company.installations.order_by("created_at").first() or Installation.objects.create(
+        company=company,
+        name=company.name,
+        timezone=company.timezone,
+        active=company.active,
+    )
 
 
 class ZoneShiftPresetViewSet(CompanyScopedViewSet):
@@ -64,8 +73,8 @@ class PositionViewSet(viewsets.ModelViewSet):
         company = self.get_company()
 
         return Position.objects.filter(
-            company=company,
-        ).order_by("name")
+            installation__company=company,
+        ).select_related("installation", "installation__company").order_by("sort_order", "name")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -73,8 +82,9 @@ class PositionViewSet(viewsets.ModelViewSet):
         return context
 
     def perform_create(self, serializer):
+        company = self.get_company()
         serializer.save(
-            company=self.get_company(),
+            installation=serializer.validated_data.get("installation") or get_default_installation(company),
         )
 
 
@@ -91,8 +101,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return (
-            Employee.objects.filter(company=self.get_company())
-            .select_related("position")
+            Employee.objects.filter(installation__company=self.get_company())
+            .select_related("installation", "installation__company", "position", "user")
             .prefetch_related(
                 "allowed_zones",
                 "allowed_shifts",
@@ -106,8 +116,9 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return context
 
     def perform_create(self, serializer):
+        company = self.get_company()
         serializer.save(
-            company=self.get_company(),
+            installation=serializer.validated_data.get("installation") or get_default_installation(company),
         )
 
 

@@ -7,7 +7,12 @@
   (companySelected)="selectCompany($event)"
   (logoutRequested)="logout()"
 >
-  <app-header header />
+  <app-header
+    header
+    [installations]="installations()"
+    [activeInstallationId]="activeInstallationId()"
+    (installationSelected)="selectInstallation($event)"
+  />
   <main hlmSidebarInset class="min-h-[calc(100svh-var(--header-height))]">
     <div class="flex min-h-full min-w-0 flex-1 flex-col p-4 md:p-6">
       <router-outlet />

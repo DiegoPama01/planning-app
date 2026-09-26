@@ -1,10 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { InstallationOption } from '../../core/company/installation.model';
 import { Position, PositionUpsertPayload } from '../positions/positions.model';
 import { ZoneShiftPositionRequirement, ZoneUpsertPayload } from './zones.model';
 import { Shift, ShiftUpsertPayload } from '../shifts/shifts.model';
@@ -14,16 +18,22 @@ import { randomFormColor } from '../../shared/color-utils';
 
 @Component({
   selector: 'app-zones-form',
-  imports: [FormRoot, FormField, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmFieldImports, HlmInputImports, SelectionTableComponent],
+  imports: [FormRoot, FormField, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmFieldImports, HlmInputImports, HlmSelectImports, HlmSwitchImports, SelectionTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './zones-form.component.html',
 })
 export class ZonesFormComponent {
+  private readonly router = inject(Router);
   readonly initialValue = input.required<ZoneUpsertPayload>();
   readonly submitLabel = input('Save zone');
   readonly formError = input<string | null>(null);
+  readonly installations = input<InstallationOption[]>([]);
   readonly submitForm = input.required<(value: ZoneUpsertPayload) => Promise<void>>();
-  readonly cancel = input.required<() => void>();
+  readonly cancelLink = input.required<string>();
+
+  protected async cancel(): Promise<void> {
+    await this.router.navigateByUrl(this.cancelLink());
+  }
   readonly shifts = input<Shift[]>([]);
   readonly positions = input<Position[]>([]);
   readonly createShift = input.required<(value: ShiftUpsertPayload) => Promise<Shift>>();
@@ -31,14 +41,18 @@ export class ZonesFormComponent {
 
   protected readonly model = signal<ZoneUpsertPayload>({
     name: '',
+    code: '',
+    description: '',
     color: randomFormColor(),
+    sort_order: 0,
+    active: true,
     shift_presets: [],
   });
   protected readonly localShifts = signal<Shift[]>([]);
   protected readonly localPositions = signal<Position[]>([]);
   protected readonly activeShiftId = signal<string | null>(null);
-  protected readonly newShift = signal<ShiftUpsertPayload>({ name: '', start_time: '', end_time: '', color: randomFormColor() });
-  protected readonly newPosition = signal<PositionUpsertPayload>({ name: '', color: randomFormColor() });
+  protected readonly newShift = signal<ShiftUpsertPayload>({ name: '', code: '', start_time: '', end_time: '', break_minutes: 0, color: randomFormColor(), sort_order: 0, active: true });
+  protected readonly newPosition = signal<PositionUpsertPayload>({ name: '', code: '', description: '', color: randomFormColor(), sort_order: 0, active: true });
   protected readonly createError = signal<string | null>(null);
   protected readonly shiftOptions = computed<SelectionTableItem[]>(() => this.localShifts().map((shift) => ({
     id: shift.id,
@@ -105,6 +119,7 @@ export class ZonesFormComponent {
   protected updateNewShiftName(event: Event): void { this.newShift.update((value) => ({ ...value, name: this.inputValue(event) })); }
   protected updateNewShiftStart(event: Event): void { this.newShift.update((value) => ({ ...value, start_time: this.inputValue(event) })); }
   protected updateNewShiftEnd(event: Event): void { this.newShift.update((value) => ({ ...value, end_time: this.inputValue(event) })); }
+  protected updateNewShiftBreakMinutes(event: Event): void { this.newShift.update((value) => ({ ...value, break_minutes: Number(this.inputValue(event)) || 0 })); }
   protected updateNewShiftColor(event: Event): void { this.newShift.update((value) => ({ ...value, color: this.inputValue(event) })); }
   protected updateNewPositionName(event: Event): void { this.newPosition.update((value) => ({ ...value, name: this.inputValue(event) })); }
   protected updateNewPositionColor(event: Event): void { this.newPosition.update((value) => ({ ...value, color: this.inputValue(event) })); }
@@ -160,7 +175,7 @@ export class ZonesFormComponent {
       this.localShifts.update((items) => [...items, shift]);
       this.toggleShift(shift.id, true);
       this.activeShiftId.set(shift.id);
-      this.newShift.set({ name: '', start_time: '', end_time: '', color: randomFormColor() });
+      this.newShift.set({ name: '', code: '', start_time: '', end_time: '', break_minutes: 0, color: randomFormColor(), sort_order: 0, active: true });
     } catch {
       this.createError.set('We could not create this shift.');
     }
@@ -172,7 +187,7 @@ export class ZonesFormComponent {
       const position = await this.createPosition()(this.newPosition());
       this.localPositions.update((items) => [...items, position]);
       this.addPosition(position.id);
-      this.newPosition.set({ name: '', color: randomFormColor() });
+      this.newPosition.set({ name: '', code: '', description: '', color: randomFormColor(), sort_order: 0, active: true });
     } catch {
       this.createError.set('We could not create this position.');
     }
@@ -201,4 +216,22 @@ export class ZonesFormComponent {
       },
     },
   );
+
+  protected readonly installationToLabel = (value: string | null | undefined) => {
+    if (!value) {
+      return '';
+    }
+
+    return this.installations().find((installation) => installation.id === value)?.name ?? value;
+  };
+
+  protected updateInstallation(installationId: string): void {
+    this.model.update((value) => ({ ...value, installation: installationId || undefined }));
+    this.newShift.update((value) => ({ ...value, installation: installationId || undefined }));
+    this.newPosition.update((value) => ({ ...value, installation: installationId || undefined }));
+  }
+
+  protected updateActive(active: boolean): void {
+    this.model.update((value) => ({ ...value, active }));
+  }
 }

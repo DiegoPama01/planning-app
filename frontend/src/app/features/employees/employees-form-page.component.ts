@@ -7,6 +7,11 @@ import { ZonesService } from '../zones/zones.service';
 import { EmployeesFormComponent } from './employees-form.component';
 import { EmployeeUpsertPayload } from './employees.model';
 import { EmployeesService } from './employees.service';
+import { CompanyService } from '../../core/company/company.service';
+import { collectInstallationOptions } from '../../core/company/installation-utils';
+import { InstallationOption } from '../../core/company/installation.model';
+import { InstallationsService } from '../../core/company/installations.service';
+import { randomFormColor } from '../../shared/color-utils';
 
 @Component({
   selector: 'app-employees-form-page',
@@ -18,6 +23,8 @@ export class EmployeesFormPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly employeesService = inject(EmployeesService);
+  private readonly companyService = inject(CompanyService);
+  private readonly installationsService = inject(InstallationsService);
   private readonly positionsService = inject(PositionsService);
   private readonly zonesService = inject(ZonesService);
   private readonly shiftsService = inject(ShiftsService);
@@ -31,6 +38,8 @@ export class EmployeesFormPageComponent {
       firstValueFrom(
         forkJoin({
           employee: this.employeeId ? this.employeesService.get(this.employeeId) : of(null),
+          employees: this.employeesService.list(),
+          installations: this.installationsService.listForActiveCompany(),
           positions: this.positionsService.list(),
           zones: this.zonesService.list(),
           shifts: this.shiftsService.list(),
@@ -43,8 +52,16 @@ export class EmployeesFormPageComponent {
 
     if (!employee) {
       return {
+        installation: this.companyService.getActiveInstallationId() ?? undefined,
+        employee_code: '',
         first_name: '',
         last_name: '',
+        email: '',
+        phone: '',
+        hire_date: '',
+        termination_date: '',
+        color: randomFormColor(),
+        notes: '',
         active: true,
         position: '',
         allowed_zones: [],
@@ -53,10 +70,18 @@ export class EmployeesFormPageComponent {
     }
 
     return {
+      installation: employee.installation ?? undefined,
+      employee_code: employee.employee_code ?? '',
       first_name: employee.first_name,
       last_name: employee.last_name,
+      email: employee.email ?? '',
+      phone: employee.phone ?? '',
+      hire_date: employee.hire_date ?? '',
+      termination_date: employee.termination_date ?? '',
+      color: employee.color ?? randomFormColor(),
+      notes: employee.notes ?? '',
       active: employee.active,
-      position: employee.position,
+      position: employee.position ?? '',
       allowed_zones: [...employee.allowed_zones],
       allowed_shifts: [...employee.allowed_shifts],
     };
@@ -65,6 +90,15 @@ export class EmployeesFormPageComponent {
   protected readonly positions = computed(() => this.employeeFormResource.value()?.positions ?? []);
   protected readonly zones = computed(() => this.employeeFormResource.value()?.zones ?? []);
   protected readonly shifts = computed(() => this.employeeFormResource.value()?.shifts ?? []);
+  protected readonly installations = computed<InstallationOption[]>(() =>
+    collectInstallationOptions([
+      ...(this.employeeFormResource.value()?.employees ?? []),
+      ...this.positions(),
+      ...this.zones(),
+      ...this.shifts(),
+      ...(this.employeeFormResource.value()?.employee ? [this.employeeFormResource.value()!.employee!] : []),
+    ], this.employeeFormResource.value()?.installations ?? []),
+  );
 
   protected async saveEmployee(payload: EmployeeUpsertPayload): Promise<void> {
     this.formError.set(null);
@@ -82,7 +116,4 @@ export class EmployeesFormPageComponent {
     }
   }
 
-  protected async goBack(): Promise<void> {
-    await this.router.navigate(['/employees']);
-  }
 }

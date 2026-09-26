@@ -27,6 +27,14 @@ export const data = {
       icon: 'lucideSettings2',
       items: [
         {
+          title: 'Company',
+          url: '/settings/company',
+        },
+        {
+          title: 'Installations',
+          url: '/settings/installations',
+        },
+        {
           title: 'Positions',
           url: '/settings/positions',
         },

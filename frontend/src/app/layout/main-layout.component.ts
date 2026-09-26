@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AuthService } from '../core/auth/auth.service';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
-import { CompanyMembership } from '../core/auth/auth.model';
+import { InstallationsService } from '../core/company/installations.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -17,6 +18,7 @@ import { CompanyMembership } from '../core/auth/auth.model';
 })
 export class MainLayoutComponent {
   private readonly authService = inject(AuthService);
+  private readonly installationsService = inject(InstallationsService);
   private readonly router = inject(Router);
 
   protected readonly sidebarUser = computed(() => {
@@ -43,10 +45,26 @@ export class MainLayoutComponent {
   protected readonly companyPlan = computed(() => this.authService.activeCompany()?.role ?? 'member');
   protected readonly companies = computed(() => this.authService.currentUser()?.companies ?? []);
   protected readonly activeCompanyId = computed(() => this.authService.activeCompany()?.id ?? null);
+  protected readonly activeInstallationId = computed(() => this.authService.activeInstallationId());
+  protected readonly installationsResource = resource({
+    params: () => ({ companyId: this.activeCompanyId() }),
+    loader: async ({ params }) => {
+      if (!params.companyId) {
+        return [];
+      }
+
+      return firstValueFrom(this.installationsService.listForActiveCompany());
+    },
+  });
+  protected readonly installations = computed(() => this.installationsResource.value() ?? []);
 
   protected selectCompany(companyId: string): void {
     const company = this.companies().find((item) => item.id === companyId) ?? null;
     this.authService.setActiveCompany(company);
+  }
+
+  protected selectInstallation(installationId: string | null): void {
+    this.authService.setActiveInstallationId(installationId);
   }
 
   protected logout(): void {

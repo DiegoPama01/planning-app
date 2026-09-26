@@ -18,8 +18,9 @@
       [initialValue]="initialValue()"
       [submitLabel]="isEditMode ? 'Save changes' : 'Create position'"
       [formError]="formError()"
+      [installations]="installations()"
       [submitForm]="savePosition.bind(this)"
-        [cancel]="goBack.bind(this)"
+      cancelLink="/settings/positions"
     />
   }
 </section>

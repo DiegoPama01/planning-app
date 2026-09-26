@@ -2,7 +2,8 @@ export interface CompanyMembership {
   id: string;
   name: string;
   slug: string;
-  role: 'admin' | 'member';
+  role: 'owner' | 'admin' | 'member';
+  permissions?: string[];
 }
 
 export interface User {

@@ -3,6 +3,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { randomFormColor } from '../../shared/color-utils';
+import { CompanyService } from '../../core/company/company.service';
+import { collectInstallationOptions } from '../../core/company/installation-utils';
+import { InstallationOption } from '../../core/company/installation.model';
+import { InstallationsService } from '../../core/company/installations.service';
 import { PositionsFormComponent } from './positions-form.component';
 import { PositionUpsertPayload } from './positions.model';
 import { PositionsService } from './positions.service';
@@ -17,10 +21,15 @@ export class PositionsFormPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly positionsService = inject(PositionsService);
+  private readonly companyService = inject(CompanyService);
+  private readonly installationsService = inject(InstallationsService);
 
   private readonly positionId = this.route.snapshot.paramMap.get('id');
   protected readonly isEditMode = this.positionId !== null;
   protected readonly formError = signal<string | null>(null);
+
+  protected readonly positionsResource = resource({ loader: async () => firstValueFrom(this.positionsService.list()) });
+  protected readonly installationsResource = resource({ loader: async () => firstValueFrom(this.installationsService.listForActiveCompany()) });
 
   protected readonly positionResource = resource({
     loader: async () => {
@@ -38,15 +47,32 @@ export class PositionsFormPageComponent {
     if (!position) {
       return {
         name: '',
+        installation: this.companyService.getActiveInstallationId() ?? undefined,
+        code: '',
+        description: '',
         color: randomFormColor(),
+        sort_order: 0,
+        active: true,
       };
     }
 
     return {
+      installation: position.installation ?? undefined,
       name: position.name,
+      code: position.code ?? '',
+      description: position.description ?? '',
       color: position.color,
+      sort_order: position.sort_order ?? 0,
+      active: position.active ?? true,
     };
   });
+
+  protected readonly installations = computed<InstallationOption[]>(() =>
+    collectInstallationOptions([
+      ...(this.positionsResource.value() ?? []),
+      ...(this.positionResource.value() ? [this.positionResource.value()!] : []),
+    ], this.installationsResource.value() ?? []),
+  );
 
   protected async savePosition(payload: PositionUpsertPayload): Promise<void> {
     this.formError.set(null);
@@ -64,7 +90,4 @@ export class PositionsFormPageComponent {
     }
   }
 
-  protected async goBack(): Promise<void> {
-    await this.router.navigate(['/settings/positions']);
-  }
 }
